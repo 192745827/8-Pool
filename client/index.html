@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity 8-Ball Multiplayer Pool</title>
+  <!-- Google Fonts for premium typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 1. LOBBY DASHBOARD OVERLAY -->
+    <div id="lobby-screen" class="screen active">
+      <div class="glass-card main-lobby animate-fade-in">
+        <h1 class="logo-text">8-POOL</h1>
+        <p class="subtitle-text">Real-time Multiplayer Arcade</p>
+        
+        <div class="input-group">
+          <label for="username-input">Enter Username</label>
+          <input type="text" id="username-input" placeholder="PocketMaster99" maxlength="15" autocomplete="off" />
+        </div>
+        
+        <button id="find-match-btn" class="glow-btn">
+          <span>Find Match</span>
+          <div class="glow-effect"></div>
+        </button>
+
+        <div id="matchmaking-status" class="status-indicator hidden">
+          <div class="spinner"></div>
+          <span id="status-text">Searching for an opponent...</span>
+          <button id="cancel-matchmaking-btn" class="text-btn">Cancel</button>
+        </div>
+
+        <div class="stats-panel">
+          <span id="online-count">Connecting to server...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. GAMEPLAY SCREEN -->
+    <div id="game-screen" class="screen">
+      <!-- Top HUD Panel -->
+      <header class="hud-header glass-card">
+        <div class="player-panel left-player active" id="player1-panel">
+          <div class="player-avatar">P1</div>
+          <div class="player-info">
+            <span class="player-name" id="player1-name">Player 1</span>
+            <span class="player-ball-type" id="player1-type">Undecided</span>
+          </div>
+        </div>
+
+        <div class="game-vs">
+          <span class="vs-text">VS</span>
+          <div id="game-status-msg">Your Turn</div>
+        </div>
+
+        <div class="player-panel right-player" id="player2-panel">
+          <div class="player-info">
+            <span class="player-name" id="player2-name">Player 2</span>
+            <span class="player-ball-type" id="player2-type">Undecided</span>
+          </div>
+          <div class="player-avatar">P2</div>
+        </div>
+      </header>
+
+      <!-- Main Game Canvas Container -->
+      <div class="game-viewport">
+        <!-- Power slider for mobile/precise shots -->
+        <div class="power-bar-container glass-card">
+          <span class="power-label">POWER</span>
+          <div class="power-slider-track">
+            <div id="power-slider-fill" class="power-fill"></div>
+          </div>
+          <span id="power-percentage" class="power-val">0%</span>
+        </div>
+
+        <!-- The Canvas wrapper to maintain aspect ratio -->
+        <div class="canvas-wrapper">
+          <canvas id="pool-canvas" width="860" height="460"></canvas>
+        </div>
+        
+        <!-- Bottom Controls Indicator -->
+        <div class="controls-overlay glass-card">
+          <div class="control-tip">🖱️ Left Click + Drag to Aim Cue Stick</div>
+          <div class="control-tip font-weight-bold">⚡ Release to Shoot (or click Shoot button)</div>
+          <button id="shoot-btn" class="glow-btn small-btn hidden">SHOOT</button>
+        </div>
+      </div>
+
+      <!-- Action Panel -->
+      <div class="action-footer">
+        <button id="leave-game-btn" class="danger-btn">Leave Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client JavaScript -->
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
