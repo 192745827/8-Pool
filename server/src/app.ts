@@ -1,0 +1,24 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import healthRouter from './routes/health';
+import { errorHandler } from './middleware/errorHandler';
+
+// Load environment variables
+dotenv.config();
+
+export const app = express();
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+
+// Middleware configurations
+app.use(cors({ origin: corsOrigin }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Routing mounts
+app.use('/health', healthRouter);
+
+// Fallback global error handler
+app.use(errorHandler);
+
+export default app;
