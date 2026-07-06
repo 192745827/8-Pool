@@ -16,6 +16,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routing mounts
+app.get('/', (req, res) => {
+  res.send('Backend Running Successfully');
+});
 app.use('/health', healthRouter);
 
 // Fallback global error handler
