@@ -1,19 +1,6 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Lobby from './pages/Lobby.js';
-import GameRoom from './pages/GameRoom.js';
-// Setup routing directly within the App container to match client/src/ hierarchy
-const router = createBrowserRouter([
-    {
-        path: '/',
-        element: _jsx(Lobby, {}),
-    },
-    {
-        path: '/game/:roomId',
-        element: _jsx(GameRoom, {}),
-    },
-]);
+import { jsx as _jsx } from "react/jsx-runtime";
+import AppRoutes from './routes/AppRoutes.js';
 export const App = () => {
-    return (_jsxs("div", { className: "min-h-screen flex flex-col bg-pool-dark text-slate-100 font-body", children: [_jsx("header", { className: "sticky top-0 z-50 py-4 px-6 bg-pool-dark/85 backdrop-blur-md border-b border-white/5", children: _jsxs("div", { className: "max-w-6xl mx-auto flex justify-between items-center", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("span", { className: "text-2xl", children: "\uD83C\uDFB1" }), _jsx("span", { className: "font-display font-extrabold text-lg tracking-wider text-white", children: "8-POOL MULTIPLAYER" })] }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx("span", { className: "w-2 h-2 rounded-full bg-emerald-500 animate-pulse" }), _jsx("span", { className: "text-xs text-slate-400 font-semibold tracking-wide uppercase", children: "Restructured Client Setup" })] })] }) }), _jsx("main", { className: "flex-grow flex flex-col justify-center max-w-6xl mx-auto w-full py-8", children: _jsx(RouterProvider, { router: router }) }), _jsx("footer", { className: "py-4 text-center text-xs text-slate-600 border-t border-white/5", children: "\u00A9 2026 Antigravity 8-Pool. Restructured client workspace." })] }));
+    return _jsx(AppRoutes, {});
 };
 export default App;
