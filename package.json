@@ -14,6 +14,9 @@
     "build:server": "npm run build --workspace=server",
     "build:shared": "npm run build --workspace=shared",
     "build:all": "npm run build --workspaces",
+    "test:server:model": "npm run test:model --workspace=server",
+    "test:model": "npm run test:model --workspace=server",
+    "test:api": "npm run test:api --workspace=server",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
