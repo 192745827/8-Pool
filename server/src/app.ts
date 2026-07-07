@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import healthRouter from './routes/health';
+import authRouter from './routes/auth.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
@@ -20,6 +21,7 @@ app.get('/', (req, res) => {
   res.send('Backend Running Successfully');
 });
 app.use('/health', healthRouter);
+app.use('/api/users', authRouter);
 
 // Fallback global error handler
 app.use(errorHandler);
