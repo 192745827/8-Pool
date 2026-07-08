@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { api } from '../services/api';
-import StatsCard from '../components/common/StatsCard';
-import JoinRoomModal from '../components/common/JoinRoomModal';
+import StatsCard from '../components/StatsCard';
+import JoinRoomModal from '../components/JoinRoomModal';
+import CreateRoomButton from '../components/CreateRoomButton';
 
 interface UserProfile {
   _id: string;
@@ -80,12 +81,12 @@ export const Dashboard: React.FC = () => {
         const targetRoom = publicRooms[0];
         const joinRes = await api.post('/api/rooms/join', { roomId: targetRoom.roomId });
         setRoom(joinRes.data);
-        navigate('/lobby');
+        navigate(`/game/${targetRoom.roomId}`);
       } else {
         // Create a new public room
         const createRes = await api.post('/api/rooms/create', { isPrivate: false });
         setRoom(createRes.data);
-        navigate('/lobby');
+        navigate(`/game/${createRes.data.roomId}`);
       }
     } catch (err: any) {
       setActionError(err.response?.data?.error || err.message || 'Failed to matchmake.');
@@ -100,7 +101,7 @@ export const Dashboard: React.FC = () => {
     try {
       const res = await api.post('/api/rooms/create', { isPrivate });
       setRoom(res.data);
-      navigate('/lobby');
+      navigate(`/game/${res.data.roomId}`);
     } catch (err: any) {
       setActionError(err.response?.data?.error || err.message || 'Failed to create room.');
     } finally {
@@ -114,7 +115,7 @@ export const Dashboard: React.FC = () => {
     try {
       const res = await api.post('/api/rooms/join', { roomId });
       setRoom(res.data);
-      navigate('/lobby');
+      navigate(`/game/${res.data.roomId}`);
     } catch (err: any) {
       setActionError(err.response?.data?.error || err.message || 'Failed to join room.');
       throw err; // throw back to let the modal show the error
@@ -266,20 +267,18 @@ export const Dashboard: React.FC = () => {
 
             {/* Create Room Options */}
             <div className="grid grid-cols-2 gap-2">
-              <button
+              <CreateRoomButton
+                isPrivate={false}
                 onClick={() => handleCreateRoom(false)}
-                disabled={isActionLoading}
-                className="py-3 px-4 bg-slate-900/60 border border-white/10 hover:border-pool-purple/45 text-white font-display font-bold text-xs rounded-xl transition duration-300 transform active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
-                <span>➕</span> Create Public
-              </button>
-              <button
+                isLoading={isActionLoading}
+                className="w-full"
+              />
+              <CreateRoomButton
+                isPrivate={true}
                 onClick={() => handleCreateRoom(true)}
-                disabled={isActionLoading}
-                className="py-3 px-4 bg-slate-900/60 border border-white/10 hover:border-pool-purple/45 text-white font-display font-bold text-xs rounded-xl transition duration-300 transform active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
-                <span>🔒</span> Create Private
-              </button>
+                isLoading={isActionLoading}
+                className="w-full"
+              />
             </div>
 
             {/* Join Room */}
