@@ -52,7 +52,8 @@ export const Profile: React.FC = () => {
       setSearchResult(res.data);
     } catch (err: any) {
       console.error('Search error:', err);
-      const msg = err.response?.data?.error || 'Player not found.';
+      const msg = err.response?.data?.error || 
+        (err.response ? 'Player not found.' : 'Unable to connect to the server.');
       setSearchError(msg);
     }
   };

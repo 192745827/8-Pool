@@ -69,7 +69,10 @@ export const Register: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Registration error:', err);
-      const msg = err.response?.data?.error || 'Failed to create profile. The username or email might already be taken.';
+      const msg = err.response?.data?.error || 
+        (err.response 
+          ? 'Failed to create profile. The username or email might already be taken.'
+          : 'Unable to connect to the server. Please check if the backend server is running.');
       setError(msg);
     } finally {
       setIsLoading(false);

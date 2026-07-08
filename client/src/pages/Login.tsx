@@ -55,7 +55,10 @@ export const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);
-      const msg = err.response?.data?.error || 'Failed to sign in. Please check your credentials.';
+      const msg = err.response?.data?.error || 
+        (err.response 
+          ? 'Failed to sign in. Please check your credentials.'
+          : 'Unable to connect to the server. Please check if the backend server is running.');
       setError(msg);
     } finally {
       setIsLoading(false);
