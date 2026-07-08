@@ -6,6 +6,7 @@ import PlayerCard from '../components/PlayerCard';
 import socketService from '../socket/socket';
 import { SOCKET_EVENTS } from '../socket/socketEvents';
 import { GameRoom, SharedUser } from '@pool/shared';
+import Scene from '../game/Scene';
 
 export const Game: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -218,23 +219,9 @@ export const Game: React.FC = () => {
             Dynamic waiting room countdown finished. Game successfully initialized!
           </p>
 
-          {/* Large green felt pool table viewport placeholder */}
-          <div className="aspect-[2/1] max-w-2xl mx-auto my-8 bg-pool-felt border-4 border-amber-900 rounded-3xl relative flex flex-col items-center justify-center shadow-[inset_0_0_30px_rgba(0,0,0,0.6)]">
-            {/* Table rails pockets */}
-            <div className="absolute top-1 left-1 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
-            <div className="absolute top-1 right-1 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
-            <div className="absolute bottom-1 left-1 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
-            <div className="absolute bottom-1 right-1 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
-            <div className="absolute top-1 left-[50%] -translate-x-1/2 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
-            <div className="absolute bottom-1 left-[50%] -translate-x-1/2 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
-
-            <div className="flex gap-4 items-center mb-2 z-10">
-              <span className="text-white text-3xl animate-spin">⚪</span>
-              <span className="text-white text-4xl">🎱</span>
-            </div>
-            <span className="text-white/40 font-display font-extrabold text-sm tracking-wider uppercase select-none">
-              Pool Table Viewport (Gameplay coming soon!)
-            </span>
+          {/* 3D Scene Viewport rendered from structured boilerplate */}
+          <div className="my-8 max-w-2xl mx-auto">
+            <Scene />
           </div>
 
           <div className="flex justify-center items-center gap-8 mb-8">
