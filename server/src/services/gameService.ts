@@ -11,6 +11,8 @@ export class GameService {
       roomId,
       host: '',
       guest: null,
+      hostReady: false,
+      guestReady: false,
       status: 'lobby',
       isPrivate: false,
       maxPlayers: 2,

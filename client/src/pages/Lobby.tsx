@@ -5,6 +5,8 @@ import { api } from '../services/api';
 import RoomList from '../components/RoomList';
 import JoinRoomModal from '../components/JoinRoomModal';
 import CreateRoomButton from '../components/CreateRoomButton';
+import socketService from '../socket/socket';
+import { SOCKET_EVENTS } from '../socket/socketEvents';
 import { GameRoom } from '@pool/shared';
 
 export const Lobby: React.FC = () => {
@@ -33,37 +35,73 @@ export const Lobby: React.FC = () => {
     }
   };
 
-  // Initial rooms fetch
+  // Initial rooms fetch and socket initialization
   useEffect(() => {
     fetchPublicRooms();
-  }, []);
 
-  const handleCreateRoom = async (isPrivate: boolean) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      socketService.connect(token);
+    }
+
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.on(SOCKET_EVENTS.ROOM_CREATED, (room) => {
+        setRoom(room);
+        setIsActionLoading(false);
+        navigate(`/game/${room.roomId}`);
+      });
+      socket.on(SOCKET_EVENTS.ROOM_ERROR, (errData) => {
+        setError(errData.message);
+        setIsActionLoading(false);
+        setJoiningRoomId(null);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off(SOCKET_EVENTS.ROOM_CREATED);
+        socket.off(SOCKET_EVENTS.ROOM_ERROR);
+      }
+    };
+  }, [navigate, setRoom]);
+
+  const handleCreateRoom = (isPrivate: boolean) => {
     setIsActionLoading(true);
     setError(null);
-    try {
-      const res = await api.post('/api/rooms/create', { isPrivate });
-      setRoom(res.data);
-      navigate(`/game/${res.data.roomId}`);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to create room.');
-    } finally {
-      setIsActionLoading(false);
-    }
+    socketService.emit(SOCKET_EVENTS.CREATE_ROOM, { isPrivate });
   };
 
   const handleJoinRoom = async (roomId: string) => {
     setJoiningRoomId(roomId);
     setError(null);
-    try {
-      const res = await api.post('/api/rooms/join', { roomId });
-      setRoom(res.data);
-      navigate(`/game/${res.data.roomId}`);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to join room.');
-    } finally {
+    
+    const socket = socketService.getSocket();
+    if (!socket) {
+      setError('Socket connection not established. Reconnecting...');
       setJoiningRoomId(null);
+      return;
     }
+
+    const handleUpdated = (room: any) => {
+      setRoom(room);
+      setJoiningRoomId(null);
+      navigate(`/game/${room.roomId}`);
+      socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleUpdated);
+      socket.off(SOCKET_EVENTS.ROOM_ERROR, handleError);
+    };
+
+    const handleError = (errData: any) => {
+      setError(errData.message);
+      setJoiningRoomId(null);
+      socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleUpdated);
+      socket.off(SOCKET_EVENTS.ROOM_ERROR, handleError);
+    };
+
+    socket.on(SOCKET_EVENTS.ROOM_UPDATED, handleUpdated);
+    socket.on(SOCKET_EVENTS.ROOM_ERROR, handleError);
+
+    socketService.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId: roomId.trim().toUpperCase() });
   };
 
   return (

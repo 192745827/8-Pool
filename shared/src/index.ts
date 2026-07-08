@@ -24,6 +24,8 @@ export interface GameRoom {
   roomId: string;
   host: SharedUser | string;
   guest?: SharedUser | string | null;
+  hostReady: boolean;
+  guestReady: boolean;
   status: 'lobby' | 'playing' | 'ended';
   isPrivate: boolean;
   maxPlayers: number;

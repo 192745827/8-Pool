@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types/auth';
 import * as roomService from '../services/room.service';
+import { roomReadyStates } from '../socket/room.socket';
 
 /**
  * Controller to handle room creation.
@@ -16,7 +17,14 @@ export const createRoomController = async (req: AuthRequest, res: Response): Pro
     const { isPrivate } = req.body;
     const room = await roomService.createRoom(req.user.id, !!isPrivate);
 
-    res.status(201).json(room);
+    // Initialize mock ready states on return
+    const roomPayload = {
+      ...room.toJSON(),
+      hostReady: false,
+      guestReady: false,
+    };
+
+    res.status(201).json(roomPayload);
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to create room' });
   }
@@ -40,7 +48,17 @@ export const joinRoomController = async (req: AuthRequest, res: Response): Promi
     }
 
     const room = await roomService.joinRoom(roomId, req.user.id);
-    res.status(200).json(room);
+    
+    // Merge in-memory ready status
+    const normalizedCode = roomId.trim().toUpperCase();
+    const readyState = roomReadyStates.get(normalizedCode) || { hostReady: false, guestReady: false };
+    const roomPayload = {
+      ...room.toJSON(),
+      hostReady: readyState.hostReady,
+      guestReady: readyState.guestReady,
+    };
+
+    res.status(200).json(roomPayload);
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to join room' });
   }
@@ -64,7 +82,19 @@ export const leaveRoomController = async (req: AuthRequest, res: Response): Prom
     }
 
     const updatedRoom = await roomService.leaveRoom(roomId, req.user.id);
-    res.status(200).json({ message: 'Successfully left the room', room: updatedRoom });
+    
+    let roomPayload = null;
+    if (updatedRoom) {
+      const normalizedCode = roomId.trim().toUpperCase();
+      const readyState = roomReadyStates.get(normalizedCode) || { hostReady: false, guestReady: false };
+      roomPayload = {
+        ...updatedRoom.toJSON(),
+        hostReady: readyState.hostReady,
+        guestReady: readyState.guestReady,
+      };
+    }
+
+    res.status(200).json({ message: 'Successfully left the room', room: roomPayload });
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to leave room' });
   }
@@ -77,7 +107,18 @@ export const leaveRoomController = async (req: AuthRequest, res: Response): Prom
 export const getRoomsController = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const rooms = await roomService.getPublicLobbyRooms();
-    res.status(200).json(rooms);
+    
+    // Merge in-memory ready states for the lobby list search response
+    const roomsPayload = rooms.map(room => {
+      const readyState = roomReadyStates.get(room.roomId.trim().toUpperCase()) || { hostReady: false, guestReady: false };
+      return {
+        ...room.toJSON(),
+        hostReady: readyState.hostReady,
+        guestReady: readyState.guestReady,
+      };
+    });
+
+    res.status(200).json(roomsPayload);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to fetch rooms' });
   }
@@ -96,8 +137,22 @@ export const getRoomDetailsController = async (req: AuthRequest, res: Response):
     }
 
     const room = await roomService.getRoomDetails(roomId);
-    res.status(200).json(room);
+    if (!room) {
+      res.status(404).json({ error: 'Room not found' });
+      return;
+    }
+
+    // Merge in-memory ready states for this specific room
+    const normalizedCode = roomId.trim().toUpperCase();
+    const readyState = roomReadyStates.get(normalizedCode) || { hostReady: false, guestReady: false };
+    const roomPayload = {
+      ...room.toJSON(),
+      hostReady: readyState.hostReady,
+      guestReady: readyState.guestReady,
+    };
+
+    res.status(200).json(roomPayload);
   } catch (error: any) {
-    res.status(404).json({ error: error.message || 'Room not found' });
+    res.status(400).json({ error: error.message || 'Failed to fetch room details' });
   }
 };

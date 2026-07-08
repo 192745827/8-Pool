@@ -5,6 +5,8 @@ import { api } from '../services/api';
 import StatsCard from '../components/StatsCard';
 import JoinRoomModal from '../components/JoinRoomModal';
 import CreateRoomButton from '../components/CreateRoomButton';
+import socketService from '../socket/socket';
+import { SOCKET_EVENTS } from '../socket/socketEvents';
 
 interface UserProfile {
   _id: string;
@@ -63,65 +65,109 @@ export const Dashboard: React.FC = () => {
   }, [setUser, resetStore, navigate]);
 
   const handleLogout = () => {
+    socketService.disconnect();
     localStorage.removeItem('token');
     resetStore();
     navigate('/login');
   };
 
+  // Setup Socket connection and listeners
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      socketService.connect(token);
+    }
+
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.on(SOCKET_EVENTS.ROOM_CREATED, (room) => {
+        setRoom(room);
+        setIsActionLoading(false);
+        navigate(`/game/${room.roomId}`);
+      });
+      socket.on(SOCKET_EVENTS.ROOM_ERROR, (errData) => {
+        setActionError(errData.message);
+        setIsActionLoading(false);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off(SOCKET_EVENTS.ROOM_CREATED);
+        socket.off(SOCKET_EVENTS.ROOM_ERROR);
+      }
+    };
+  }, [navigate, setRoom, profile]);
+
   const handleQuickPlay = async () => {
     setIsActionLoading(true);
     setActionError(null);
     try {
-      // Find public lobbies
+      const socket = socketService.getSocket();
+      if (!socket) {
+        const token = localStorage.getItem('token');
+        if (token) {
+          socketService.connect(token);
+        } else {
+          throw new Error('Not authenticated');
+        }
+      }
+
+      // Find public lobbies via API
       const roomsRes = await api.get('/api/rooms');
       const publicRooms = roomsRes.data;
 
       if (publicRooms.length > 0) {
-        // Join the first available room
+        // Join public lobby via socket
         const targetRoom = publicRooms[0];
-        const joinRes = await api.post('/api/rooms/join', { roomId: targetRoom.roomId });
-        setRoom(joinRes.data);
-        navigate(`/game/${targetRoom.roomId}`);
+        handleJoinSubmit(targetRoom.roomId);
       } else {
-        // Create a new public room
-        const createRes = await api.post('/api/rooms/create', { isPrivate: false });
-        setRoom(createRes.data);
-        navigate(`/game/${createRes.data.roomId}`);
+        // Create new public lobby via socket
+        socketService.emit(SOCKET_EVENTS.CREATE_ROOM, { isPrivate: false });
       }
     } catch (err: any) {
-      setActionError(err.response?.data?.error || err.message || 'Failed to matchmake.');
-    } finally {
+      setActionError(err.message || 'Failed to matchmake.');
       setIsActionLoading(false);
     }
   };
 
-  const handleCreateRoom = async (isPrivate: boolean) => {
+  const handleCreateRoom = (isPrivate: boolean) => {
     setIsActionLoading(true);
     setActionError(null);
-    try {
-      const res = await api.post('/api/rooms/create', { isPrivate });
-      setRoom(res.data);
-      navigate(`/game/${res.data.roomId}`);
-    } catch (err: any) {
-      setActionError(err.response?.data?.error || err.message || 'Failed to create room.');
-    } finally {
-      setIsActionLoading(false);
-    }
+    socketService.emit(SOCKET_EVENTS.CREATE_ROOM, { isPrivate });
   };
 
   const handleJoinSubmit = async (roomId: string) => {
     setIsActionLoading(true);
     setActionError(null);
-    try {
-      const res = await api.post('/api/rooms/join', { roomId });
-      setRoom(res.data);
-      navigate(`/game/${res.data.roomId}`);
-    } catch (err: any) {
-      setActionError(err.response?.data?.error || err.message || 'Failed to join room.');
-      throw err; // throw back to let the modal show the error
-    } finally {
+    
+    const socket = socketService.getSocket();
+    if (!socket) {
+      setActionError('Socket connection not established. Reconnecting...');
       setIsActionLoading(false);
+      return;
     }
+
+    // Set temporary one-shot handlers to catch results
+    const handleUpdated = (room: any) => {
+      setRoom(room);
+      setIsActionLoading(false);
+      navigate(`/game/${room.roomId}`);
+      socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleUpdated);
+      socket.off(SOCKET_EVENTS.ROOM_ERROR, handleError);
+    };
+
+    const handleError = (errData: any) => {
+      setActionError(errData.message);
+      setIsActionLoading(false);
+      socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleUpdated);
+      socket.off(SOCKET_EVENTS.ROOM_ERROR, handleError);
+    };
+
+    socket.on(SOCKET_EVENTS.ROOM_UPDATED, handleUpdated);
+    socket.on(SOCKET_EVENTS.ROOM_ERROR, handleError);
+
+    socketService.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId: roomId.trim().toUpperCase() });
   };
 
   if (isLoading) {

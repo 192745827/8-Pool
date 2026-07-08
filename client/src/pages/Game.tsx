@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { api } from '../services/api';
 import PlayerCard from '../components/PlayerCard';
+import socketService from '../socket/socket';
+import { SOCKET_EVENTS } from '../socket/socketEvents';
 import { GameRoom, SharedUser } from '@pool/shared';
 
 export const Game: React.FC = () => {
@@ -16,11 +18,17 @@ export const Game: React.FC = () => {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  
+  // Game start transition placeholder state
+  const [gameStarted, setGameStarted] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
-  // Polling interval reference
-  const pollingRef = useRef<any>(null);
+  // Temporary chat message logs
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch initial room details on mount or roomId change
+  // Fetch initial room details and verify connection on mount
   useEffect(() => {
     const fetchRoomDetails = async () => {
       if (!roomId) return;
@@ -38,61 +46,105 @@ export const Game: React.FC = () => {
     };
 
     fetchRoomDetails();
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      socketService.connect(token);
+    }
   }, [roomId, setRoom]);
 
-  // Polling effect: poll every 3 seconds to keep room details in sync
+  // Setup Socket listeners for real-time room updates
   useEffect(() => {
-    if (roomId) {
-      if (pollingRef.current) clearInterval(pollingRef.current);
+    const socket = socketService.getSocket();
+    if (!socket || !roomId) return;
 
-      const poll = async () => {
-        try {
-          const res = await api.get(`/api/rooms/${roomId}`);
-          const updatedRoom = res.data;
+    // Join room channel immediately
+    socket.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId });
 
-          if (updatedRoom.status === 'ended') {
-            setRoom(null);
-            setError('The host has ended this room.');
-            if (pollingRef.current) clearInterval(pollingRef.current);
-            return;
-          }
+    socket.on(SOCKET_EVENTS.ROOM_UPDATED, (updatedRoom: GameRoom) => {
+      setRoom(updatedRoom);
+      
+      // If we are currently playing, sync status
+      if (updatedRoom.status === 'playing') {
+        setGameStarted(true);
+      } else {
+        setGameStarted(false);
+      }
+    });
 
-          setRoom(updatedRoom);
-        } catch (err) {
-          console.error('Error polling room status:', err);
-          // If the room was deleted, kick out
-          setRoom(null);
-          setError('Room has been closed. Returning to dashboard.');
-          if (pollingRef.current) clearInterval(pollingRef.current);
+    socket.on(SOCKET_EVENTS.ROOM_ENDED, (data: { message: string }) => {
+      setRoom(null);
+      setError(data.message || 'Room has been closed by host.');
+      setGameStarted(false);
+      setCountdown(null);
+    });
+
+    socket.on(SOCKET_EVENTS.ROOM_ERROR, (errData: { message: string }) => {
+      setError(errData.message);
+    });
+
+    // Auto Start Game Listener
+    socket.on(SOCKET_EVENTS.START_GAME, (roomDetails: GameRoom) => {
+      setRoom(roomDetails);
+      
+      // Trigger a 3-second countdown transition
+      let count = 3;
+      setCountdown(count);
+      const timer = setInterval(() => {
+        count -= 1;
+        if (count <= 0) {
+          clearInterval(timer);
+          setCountdown(null);
+          setGameStarted(true);
+        } else {
+          setCountdown(count);
         }
-      };
+      }, 1000);
+    });
 
-      pollingRef.current = setInterval(poll, 3000);
-    }
+    // Message listener
+    socket.on(SOCKET_EVENTS.RECEIVE_MESSAGE, (payload: any) => {
+      setMessages((prev) => [...prev, payload]);
+    });
 
     return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
+      socket.off(SOCKET_EVENTS.ROOM_UPDATED);
+      socket.off(SOCKET_EVENTS.ROOM_ENDED);
+      socket.off(SOCKET_EVENTS.ROOM_ERROR);
+      socket.off(SOCKET_EVENTS.START_GAME);
+      socket.off(SOCKET_EVENTS.RECEIVE_MESSAGE);
     };
   }, [roomId, setRoom]);
 
-  const handleLeaveRoom = async () => {
-    if (!roomId) return;
-    setIsActionLoading(true);
-    try {
-      await api.post('/api/rooms/leave', { roomId });
-      setRoom(null);
-      navigate('/dashboard');
-    } catch (err: any) {
-      console.error('Error leaving room:', err);
-      // force clean local state and redirect
-      setRoom(null);
-      navigate('/dashboard');
-    } finally {
-      setIsActionLoading(false);
+  const handleToggleReady = () => {
+    if (!currentRoom || !user || !roomId) return;
+
+    const host = typeof currentRoom.host === 'object' ? (currentRoom.host as SharedUser) : null;
+    const guest = typeof currentRoom.guest === 'object' ? (currentRoom.guest as SharedUser) : null;
+    
+    const isHost = host && user.id === host._id;
+    const isGuest = guest && user.id === guest._id;
+
+    if (isHost) {
+      if (currentRoom.hostReady) {
+        socketService.emit(SOCKET_EVENTS.PLAYER_NOT_READY, { roomId });
+      } else {
+        socketService.emit(SOCKET_EVENTS.PLAYER_READY, { roomId });
+      }
+    } else if (isGuest) {
+      if (currentRoom.guestReady) {
+        socketService.emit(SOCKET_EVENTS.PLAYER_NOT_READY, { roomId });
+      } else {
+        socketService.emit(SOCKET_EVENTS.PLAYER_READY, { roomId });
+      }
     }
+  };
+
+  const handleLeaveRoom = () => {
+    if (!roomId) return;
+    socketService.emit(SOCKET_EVENTS.LEAVE_ROOM, { roomId });
+    setRoom(null);
+    navigate('/dashboard');
   };
 
   const handleCopyCode = () => {
@@ -100,6 +152,18 @@ export const Game: React.FC = () => {
     navigator.clipboard.writeText(roomId);
     setCopyFeedback(true);
     setTimeout(() => setCopyFeedback(false), 2000);
+  };
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSendChatMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !roomId) return;
+    socketService.emit(SOCKET_EVENTS.SEND_MESSAGE, { roomId, message: chatInput.trim() });
+    setChatInput('');
   };
 
   if (isLoading) {
@@ -133,9 +197,83 @@ export const Game: React.FC = () => {
 
   const host = typeof currentRoom.host === 'object' ? (currentRoom.host as SharedUser) : null;
   const guest = typeof currentRoom.guest === 'object' ? (currentRoom.guest as SharedUser) : null;
+  
+  const isHost = host && user && user.id === host._id;
+  const isGuest = guest && user && user.id === guest._id;
+  
+  const currentUserReady = isHost ? currentRoom.hostReady : isGuest ? currentRoom.guestReady : false;
 
+  // ─── PLAYING VIEW (GAME STARTED PLACEHOLDER) ───
+  if (gameStarted) {
+    return (
+      <div className="max-w-4xl mx-auto w-full px-4 py-8">
+        <div className="p-8 bg-slate-950 border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden text-center">
+          {/* Subtle neon glowing table border */}
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-pool-cyan via-pool-purple to-pool-cyan shadow-[0_0_15px_#00f0ff]" />
+
+          <h2 className="text-3xl font-extrabold font-display text-white tracking-widest uppercase animate-pulse">
+            🎱 MATCH IN PROGRESS
+          </h2>
+          <p className="text-xs text-pool-cyan font-body mt-2">
+            Dynamic waiting room countdown finished. Game successfully initialized!
+          </p>
+
+          {/* Large green felt pool table viewport placeholder */}
+          <div className="aspect-[2/1] max-w-2xl mx-auto my-8 bg-pool-felt border-4 border-amber-900 rounded-3xl relative flex flex-col items-center justify-center shadow-[inset_0_0_30px_rgba(0,0,0,0.6)]">
+            {/* Table rails pockets */}
+            <div className="absolute top-1 left-1 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
+            <div className="absolute top-1 right-1 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
+            <div className="absolute bottom-1 left-1 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
+            <div className="absolute bottom-1 right-1 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
+            <div className="absolute top-1 left-[50%] -translate-x-1/2 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
+            <div className="absolute bottom-1 left-[50%] -translate-x-1/2 w-6 h-6 bg-neutral-900 rounded-full shadow-inner" />
+
+            <div className="flex gap-4 items-center mb-2 z-10">
+              <span className="text-white text-3xl animate-spin">⚪</span>
+              <span className="text-white text-4xl">🎱</span>
+            </div>
+            <span className="text-white/40 font-display font-extrabold text-sm tracking-wider uppercase select-none">
+              Pool Table Viewport (Gameplay coming soon!)
+            </span>
+          </div>
+
+          <div className="flex justify-center items-center gap-8 mb-8">
+            <div className="text-center">
+              <div className="text-sm font-bold text-white font-display truncate max-w-[120px]">{host?.username}</div>
+              <div className="text-[10px] font-bold text-pool-cyan uppercase tracking-wider mt-0.5">Host</div>
+            </div>
+            <div className="text-slate-600 font-display text-2xl font-bold">VS</div>
+            <div className="text-center">
+              <div className="text-sm font-bold text-white font-display truncate max-w-[120px]">{guest?.username}</div>
+              <div className="text-[10px] font-bold text-pool-purple uppercase tracking-wider mt-0.5">Opponent</div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleLeaveRoom}
+            className="py-3 px-8 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-400 font-display font-bold text-xs rounded-xl shadow transition duration-300 transform active:scale-95"
+          >
+            Leave Match & Exit
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── WAITING ROOM VIEW WITH SOCKET SYNC ───
   return (
     <div className="max-w-2xl mx-auto w-full px-4 py-8">
+      {countdown !== null && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-xl">
+          <div className="text-8xl font-black font-display text-pool-cyan animate-ping">
+            {countdown}
+          </div>
+          <p className="text-sm font-bold text-slate-400 font-display uppercase tracking-widest mt-6">
+            Both players ready! Launching match...
+          </p>
+        </div>
+      )}
+
       <div className="p-8 bg-slate-900 border border-white/10 rounded-2xl shadow-xl relative overflow-hidden">
         {/* Glowing background highlights */}
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-pool-cyan/5 blur-3xl pointer-events-none" />
@@ -157,7 +295,7 @@ export const Game: React.FC = () => {
             </button>
             <span className="text-slate-600 font-display">|</span>
             <span className="text-slate-400 font-body text-xs">
-              {currentRoom.isPrivate ? '🔒 Private Room' : '🌐 Public Room'}
+              {currentRoom.isPrivate ? '🔒 Private' : '🌐 Public'}
             </span>
           </div>
         </div>
@@ -165,29 +303,57 @@ export const Game: React.FC = () => {
         {/* Players Slot Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           <div>
-            <div className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest font-display mb-2">
-              Player 1 (Host)
+            <div className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest font-display mb-2 flex items-center justify-center gap-1.5">
+              <span>Player 1 (Host)</span>
+              {currentRoom.hostReady ? (
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+              ) : (
+                <span className="w-2 h-2 bg-rose-500 rounded-full" />
+              )}
             </div>
-            <PlayerCard user={host} isHost={true} label="P1" />
+            <PlayerCard 
+              user={host} 
+              isHost={true} 
+              label={currentRoom.hostReady ? 'READY' : 'WAITING'} 
+            />
           </div>
           <div>
-            <div className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest font-display mb-2">
-              Player 2 (Opponent)
+            <div className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest font-display mb-2 flex items-center justify-center gap-1.5">
+              <span>Player 2 (Opponent)</span>
+              {guest && (
+                currentRoom.guestReady ? (
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+                ) : (
+                  <span className="w-2 h-2 bg-rose-500 rounded-full" />
+                )
+              )}
             </div>
-            <PlayerCard user={guest} isHost={false} label="P2" />
+            <PlayerCard 
+              user={guest} 
+              isHost={false} 
+              label={guest ? (currentRoom.guestReady ? 'READY' : 'WAITING') : undefined} 
+            />
           </div>
         </div>
 
-        {/* Status Box */}
+        {/* Status & Toggle Ready Box */}
         <div className="p-4 bg-slate-950 border border-white/5 rounded-xl text-center mb-6">
           {guest ? (
-            <div>
-              <p className="text-emerald-400 font-display font-semibold text-sm animate-pulse">
-                Opponent Joined! Match Ready.
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-emerald-400 font-display font-semibold text-sm">
+                Opponent Joined! Ready up to start match.
               </p>
-              <p className="text-[11px] text-slate-500 font-body mt-1 leading-normal">
-                Wait for host to initialize the match session.
-              </p>
+              
+              <button
+                onClick={handleToggleReady}
+                className={`py-2.5 px-6 font-display font-bold text-xs rounded-xl shadow-md transition-all duration-300 transform active:scale-95 ${
+                  currentUserReady
+                    ? 'bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-400'
+                    : 'bg-gradient-to-r from-pool-cyan to-pool-cyan/85 hover:brightness-110 text-pool-dark hover:shadow-lg hover:shadow-pool-cyan/10'
+                }`}
+              >
+                {currentUserReady ? '✕ Set Not Ready' : '✓ Set Ready'}
+              </button>
             </div>
           ) : (
             <div>
@@ -202,20 +368,84 @@ export const Game: React.FC = () => {
           )}
         </div>
 
+        {/* Lobby Chat Panel */}
+        <div className="mb-6 bg-slate-950/60 border border-white/5 rounded-xl p-4 flex flex-col h-[280px]">
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-display mb-2 border-b border-white/5 pb-2 text-left">
+            💬 Lobby Chat (Temporary)
+          </div>
+          
+          {/* Messages Log */}
+          <div className="flex-grow overflow-y-auto mb-3 space-y-2 pr-1 text-left">
+            {messages.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-slate-600 font-body select-none">
+                No messages yet. Start typing below!
+              </div>
+            ) : (
+              messages.map((msg, index) => {
+                const isSelf = msg.senderId === user?.id;
+                return (
+                  <div key={index} className={`flex items-start gap-2.5 ${isSelf ? 'flex-row-reverse' : ''}`}>
+                    {/* Mini Avatar */}
+                    <div className="w-6 h-6 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs overflow-hidden shrink-0">
+                      {msg.avatar ? (
+                        <img 
+                          src={`/src/assets/avatars/${msg.avatar}.png`} 
+                          alt="Avatar" 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            (e.target as any).style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      <span className="text-[10px]">👤</span>
+                    </div>
+                    
+                    {/* Message Bubble */}
+                    <div className="max-w-[75%]">
+                      <div className={`text-[9px] text-slate-500 font-display mb-0.5 ${isSelf ? 'text-right' : 'text-left'}`}>
+                        {msg.username}
+                      </div>
+                      <div className={`py-1.5 px-3 rounded-xl text-xs font-body break-words leading-relaxed ${
+                        isSelf 
+                          ? 'bg-pool-cyan/15 border border-pool-cyan/25 text-pool-cyan rounded-tr-none' 
+                          : 'bg-slate-900 border border-white/5 text-slate-200 rounded-tl-none'
+                      }`}>
+                        {msg.message}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={chatEndRef} />
+          </div>
+          
+          {/* Chat Input Field */}
+          <form onSubmit={handleSendChatMessage} className="flex gap-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-grow px-3 py-2 bg-slate-900 border border-white/5 focus:border-pool-cyan focus:outline-none rounded-lg text-white font-body text-xs transition duration-200"
+            />
+            <button
+              type="submit"
+              className="py-2 px-4 bg-pool-cyan hover:brightness-110 active:scale-95 text-pool-dark font-display font-bold text-xs rounded-lg transition"
+            >
+              Send
+            </button>
+          </form>
+        </div>
+
         {/* Actions */}
         <div className="flex gap-4">
           <button
             onClick={handleLeaveRoom}
             disabled={isActionLoading}
-            className="w-1/2 py-3.5 bg-white/5 border border-white/10 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 text-slate-300 font-display font-bold text-xs rounded-xl shadow transition duration-300 transform active:scale-95 disabled:opacity-50"
+            className="w-full py-3.5 bg-white/5 border border-white/10 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 text-slate-300 font-display font-bold text-xs rounded-xl shadow transition duration-300 transform active:scale-95 disabled:opacity-50"
           >
             {isActionLoading ? 'Leaving...' : '🚪 Leave Room'}
-          </button>
-          <button
-            disabled
-            className="w-1/2 py-3.5 bg-slate-900 border border-white/5 text-slate-600 font-display font-bold text-xs rounded-xl shadow-inner cursor-not-allowed text-center flex items-center justify-center gap-2"
-          >
-            ⚔️ Start Game (Coming Soon)
           </button>
         </div>
       </div>
