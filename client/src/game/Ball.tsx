@@ -3,14 +3,15 @@ import React from 'react';
 interface BallProps {
   number: number;
   color: string;
+  position: [number, number, number];
 }
 
-export const Ball: React.FC<BallProps> = ({ number, color }) => {
+export const Ball: React.FC<BallProps> = ({ number, color, position }) => {
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 border border-white/5 rounded-lg">
-      <span className="text-[10px]" style={{ color }}>●</span>
-      <span className="text-[9px] font-bold text-slate-300 font-display">Ball #{number}</span>
-    </div>
+    <mesh castShadow receiveShadow position={position}>
+      <sphereGeometry args={[0.18, 32, 32]} />
+      <meshStandardMaterial color={color} roughness={0.12} metalness={0.1} />
+    </mesh>
   );
 };
 

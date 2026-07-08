@@ -220,7 +220,7 @@ export const Game: React.FC = () => {
           </p>
 
           {/* 3D Scene Viewport rendered from structured boilerplate */}
-          <div className="my-8 max-w-2xl mx-auto">
+          <div className="my-8 max-w-3xl mx-auto">
             <Scene />
           </div>
 

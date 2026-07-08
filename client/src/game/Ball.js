@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-export const Ball = ({ number, color }) => {
-    return (_jsxs("div", { className: "flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 border border-white/5 rounded-lg", children: [_jsx("span", { className: "text-[10px]", style: { color }, children: "\u25CF" }), _jsxs("span", { className: "text-[9px] font-bold text-slate-300 font-display", children: ["Ball #", number] })] }));
+export const Ball = ({ number, color, position }) => {
+    return (_jsxs("mesh", { castShadow: true, receiveShadow: true, position: position, children: [_jsx("sphereGeometry", { args: [0.18, 32, 32] }), _jsx("meshStandardMaterial", { color: color, roughness: 0.12, metalness: 0.1 })] }));
 };
 export default Ball;

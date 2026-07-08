@@ -1,5 +1,6 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
+import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 export const Camera = () => {
-    return (_jsxs("div", { className: "p-3 bg-slate-900/60 border border-white/5 rounded-xl text-left", children: [_jsxs("h4", { className: "text-xs font-bold text-slate-300 font-display flex items-center gap-2", children: [_jsx("span", { children: "\uD83C\uDFA5" }), " Camera Controller"] }), _jsx("p", { className: "text-[10px] text-slate-500 font-body mt-1 leading-normal", children: "Placeholder view. OrbitControls configuration and camera constraints will be mounted here in the next phase." })] }));
+    return (_jsxs(_Fragment, { children: [_jsx(PerspectiveCamera, { makeDefault: true, position: [0, 10, 12], fov: 45 }), _jsx(OrbitControls, { maxPolarAngle: Math.PI / 2.1, minDistance: 4, maxDistance: 25 })] }));
 };
 export default Camera;

@@ -1,11 +1,12 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Canvas } from '@react-three/fiber';
 import Camera from './Camera';
-import Lighting from './Lighting';
-import Table from './Table';
-import Cue from './Cue';
+import Lights from './Lights';
 import Environment from './Environment';
-import Ball from './Ball';
+import PoolTable from './PoolTable';
+import CueStick from './CueStick';
+import Balls from './Balls';
 export const Scene = () => {
-    return (_jsx("div", { className: "space-y-4", children: _jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [_jsx(Camera, {}), _jsx(Lighting, {}), _jsx(Environment, {}), _jsx(Table, {}), _jsx(Cue, {}), _jsxs("div", { className: "p-3 bg-slate-900/60 border border-white/5 rounded-xl text-left flex flex-col justify-between", children: [_jsxs("div", { children: [_jsxs("h4", { className: "text-xs font-bold text-slate-300 font-display flex items-center gap-2", children: [_jsx("span", { children: "\uD83D\uDD34" }), " Billiard Balls Configuration"] }), _jsx("p", { className: "text-[10px] text-slate-500 font-body mt-1 leading-normal", children: "Active game status. Spherical physical mesh instances will be loaded here dynamically in the next phase." })] }), _jsxs("div", { className: "flex gap-2 justify-start py-2 flex-wrap", children: [_jsx(Ball, { number: 0, color: "#ffffff" }), _jsx(Ball, { number: 8, color: "#0d0d0d" }), _jsx(Ball, { number: 1, color: "#fbbf24" })] })] })] }) }));
+    return (_jsx("div", { className: "w-full aspect-[2/1] bg-slate-950 border-4 border-amber-900 rounded-3xl relative overflow-hidden shadow-[inset_0_0_30px_rgba(0,0,0,0.8)]", children: _jsxs(Canvas, { shadows: true, children: [_jsx(Camera, {}), _jsx(Lights, {}), _jsx(Environment, {}), _jsx(PoolTable, {}), _jsx(CueStick, {}), _jsx(Balls, {})] }) }));
 };
 export default Scene;

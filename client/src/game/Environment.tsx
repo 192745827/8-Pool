@@ -1,15 +1,21 @@
 import React from 'react';
+import { Stars } from '@react-three/drei';
 
 export const Environment: React.FC = () => {
   return (
-    <div className="p-3 bg-slate-900/60 border border-white/5 rounded-xl text-left">
-      <h4 className="text-xs font-bold text-slate-300 font-display flex items-center gap-2">
-        <span>🌌</span> 3D Studio Environment
-      </h4>
-      <p className="text-[10px] text-slate-500 font-body mt-1 leading-normal">
-        Placeholder view. Studio HDRI environment lighting reflections and skybox textures will be mounted here in the next phase.
-      </p>
-    </div>
+    <>
+      <color attach="background" args={['#07070e']} />
+      <Stars 
+        radius={80} 
+        depth={40} 
+        count={3000} 
+        factor={4} 
+        saturation={0} 
+        fade 
+        speed={1} 
+      />
+      <gridHelper args={[24, 24, '#1e293b', '#0f172a']} position={[0, -0.01, 0]} />
+    </>
   );
 };
 
