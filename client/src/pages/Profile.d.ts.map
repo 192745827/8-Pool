@@ -1,1 +1,1 @@
-{"version":3,"file":"Profile.d.ts","sourceRoot":"","sources":["Profile.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,OAAO,CAAC;AAE1B,iBAAS,OAAO,sBAEf;AAED,eAAe,OAAO,CAAC"}
+{"version":3,"file":"Profile.d.ts","sourceRoot":"","sources":["Profile.tsx"],"names":[],"mappings":"AAAA,OAAO,KAA8B,MAAM,OAAO,CAAC;AAkBnD,eAAO,MAAM,OAAO,EAAE,KAAK,CAAC,EAuN3B,CAAC;AAEF,eAAe,OAAO,CAAC"}

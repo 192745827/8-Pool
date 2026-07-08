@@ -1,7 +1,7 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { App } from './App.js';
+import { App } from './App';
 import './styles/index.css';
 const rootElement = document.getElementById('root');
 if (!rootElement) {

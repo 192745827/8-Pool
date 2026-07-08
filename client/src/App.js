@@ -1,5 +1,5 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-import AppRoutes from './routes/AppRoutes.js';
+import AppRoutes from './routes/AppRoutes';
 export const App = () => {
     return _jsx(AppRoutes, {});
 };

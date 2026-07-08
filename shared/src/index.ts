@@ -7,16 +7,32 @@ export const TABLE_CONFIG = {
   POCKET_RADIUS: 20
 };
 
+export interface SharedUser {
+  _id: string;
+  username: string;
+  email?: string;
+  avatar: string;
+  coins: number;
+  xp: number;
+  wins: number;
+  losses: number;
+  rank: string;
+}
+
+export interface GameRoom {
+  _id?: string;
+  roomId: string;
+  host: SharedUser | string;
+  guest?: SharedUser | string | null;
+  status: 'lobby' | 'playing' | 'ended';
+  isPrivate: boolean;
+  maxPlayers: number;
+  createdAt?: string | Date;
+}
+
 export interface Player {
   id: string;
   name: string;
   isReady: boolean;
   score: number;
-}
-
-export interface GameRoom {
-  id: string;
-  players: Player[];
-  status: 'lobby' | 'playing' | 'ended';
-  activePlayerId?: string;
 }

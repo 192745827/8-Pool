@@ -8,9 +8,12 @@ export class GameService {
 
   createRoom(roomId: string): GameRoom {
     const newRoom: GameRoom = {
-      id: roomId,
-      players: [],
+      roomId,
+      host: '',
+      guest: null,
       status: 'lobby',
+      isPrivate: false,
+      maxPlayers: 2,
     };
     this.activeRooms.set(roomId, newRoom);
     return newRoom;

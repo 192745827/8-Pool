@@ -14,7 +14,6 @@ async function runTests() {
   console.log('Attempting database connection...');
 
   try {
-    // Try to connect to configured/local database
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 2000 });
     console.log(`✅ Connected to MongoDB successfully at: ${uri}`);
   } catch (error: any) {
@@ -39,38 +38,60 @@ async function runTests() {
 
     // 2. Test User Creation
     console.log('\n--- Test 1: Creating a Valid User ---');
-    const validUser = await User.create({ username: 'test_player' });
+    const validUser = await User.create({
+      username: 'test_player',
+      email: 'test_player@pool.com',
+      password: 'password123'
+    });
     console.log('✅ Created user:', {
       id: validUser._id,
       username: validUser.username,
-      gamesPlayed: validUser.gamesPlayed,
-      gamesWon: validUser.gamesWon,
+      email: validUser.email,
+      coins: validUser.coins,
+      xp: validUser.xp,
+      wins: validUser.wins,
+      losses: validUser.losses,
+      rank: validUser.rank,
       createdAt: validUser.createdAt,
     });
 
     // 3. Test Username Length Validation (Min length: 3)
     console.log('\n--- Test 2: Validating Short Username ---');
     try {
-      await User.create({ username: 'te' });
+      await User.create({
+        username: 'te',
+        email: 'te@pool.com',
+        password: 'password123'
+      });
       console.log('❌ Failed: Should not have allowed creation of username shorter than 3 characters.');
     } catch (err: any) {
       console.log('✅ Success: Properly rejected short username. Error message:', err.message);
     }
 
-    // 4. Test Integer Validation for gamesPlayed
-    console.log('\n--- Test 3: Validating Non-Integer gamesPlayed ---');
+    // 4. Test Integer Validation for wins
+    console.log('\n--- Test 3: Validating Non-Integer wins ---');
     try {
-      await User.create({ username: 'test_decimal', gamesPlayed: 2.5 });
-      console.log('❌ Failed: Should not have allowed decimal for gamesPlayed.');
+      await User.create({
+        username: 'test_decimal',
+        email: 'test_decimal@pool.com',
+        password: 'password123',
+        wins: 2.5
+      });
+      console.log('❌ Failed: Should not have allowed decimal for wins.');
     } catch (err: any) {
       console.log('✅ Success: Properly rejected decimal value. Error message:', err.message);
     }
 
     // 5. Test Negative Value Validation
-    console.log('\n--- Test 4: Validating Negative gamesWon ---');
+    console.log('\n--- Test 4: Validating Negative losses ---');
     try {
-      await User.create({ username: 'test_negative', gamesWon: -1 });
-      console.log('❌ Failed: Should not have allowed negative value for gamesWon.');
+      await User.create({
+        username: 'test_negative',
+        email: 'test_negative@pool.com',
+        password: 'password123',
+        losses: -1
+      });
+      console.log('❌ Failed: Should not have allowed negative value for losses.');
     } catch (err: any) {
       console.log('✅ Success: Properly rejected negative value. Error message:', err.message);
     }

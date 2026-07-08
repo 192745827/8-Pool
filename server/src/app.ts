@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth.routes';
+import roomRouter from './routes/room.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
@@ -22,6 +23,7 @@ app.get('/', (req, res) => {
 });
 app.use('/health', healthRouter);
 app.use('/api/users', authRouter);
+app.use('/api/rooms', roomRouter);
 
 // Fallback global error handler
 app.use(errorHandler);

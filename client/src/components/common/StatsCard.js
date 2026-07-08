@@ -1,0 +1,5 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export const StatsCard = ({ label, value, icon, description, colorClass = 'text-white', }) => {
+    return (_jsxs("div", { className: "p-5 bg-slate-900/60 border border-white/10 backdrop-blur-xl rounded-2xl shadow-xl flex flex-col justify-between hover:border-pool-cyan/40 hover:shadow-pool-cyan/5 transition-all duration-300 transform hover:-translate-y-1", children: [_jsxs("div", { className: "flex justify-between items-start", children: [_jsx("span", { className: "text-xs font-semibold text-slate-400 uppercase tracking-wider font-display", children: label }), _jsx("div", { className: "text-xl p-2 bg-white/5 border border-white/10 rounded-xl", children: icon })] }), _jsxs("div", { className: "mt-4", children: [_jsx("div", { className: `text-2xl font-extrabold font-display tracking-tight ${colorClass}`, children: value }), description && (_jsx("p", { className: "text-[11px] text-slate-500 font-body mt-1 leading-normal", children: description }))] })] }));
+};
+export default StatsCard;

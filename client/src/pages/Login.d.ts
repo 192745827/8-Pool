@@ -1,4 +1,4 @@
 import React from 'react';
-declare function Login(): React.JSX.Element;
+export declare const Login: React.FC;
 export default Login;
 //# sourceMappingURL=Login.d.ts.map

@@ -1,4 +1,4 @@
 import React from 'react';
-declare function Register(): React.JSX.Element;
+export declare const Register: React.FC;
 export default Register;
 //# sourceMappingURL=Register.d.ts.map

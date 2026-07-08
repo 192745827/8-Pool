@@ -1,4 +1,4 @@
 import React from 'react';
-declare function Dashboard(): React.JSX.Element;
+export declare const Dashboard: React.FC;
 export default Dashboard;
 //# sourceMappingURL=Dashboard.d.ts.map
