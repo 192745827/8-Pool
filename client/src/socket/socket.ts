@@ -1,7 +1,10 @@
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_EVENTS } from './socketEvents';
 
-const socketURL = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000';
+let socketURL = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000';
+if (socketURL.includes('localhost') && window.location.hostname !== 'localhost') {
+  socketURL = socketURL.replace('localhost', window.location.hostname);
+}
 
 class SocketService {
   private socket: Socket | null = null;

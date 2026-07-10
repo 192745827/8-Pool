@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   server: {
     port: 5173,
+    host: true,
     fs: {
       // Allow serving files from the workspace root (e.g. shared/)
       allow: ['..']

@@ -13,7 +13,10 @@ export const app = express();
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
 
 // Middleware configurations
-app.use(cors({ origin: corsOrigin }));
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? corsOrigin : true,
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

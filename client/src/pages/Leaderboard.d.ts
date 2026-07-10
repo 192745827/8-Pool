@@ -1,4 +1,3 @@
-import React from 'react';
-declare function Leaderboard(): React.JSX.Element;
+declare function Leaderboard(): import("react/jsx-runtime").JSX.Element;
 export default Leaderboard;
 //# sourceMappingURL=Leaderboard.d.ts.map

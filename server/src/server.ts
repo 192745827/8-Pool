@@ -12,7 +12,9 @@ connectDB();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: process.env.NODE_ENV === 'production' 
+      ? (process.env.CORS_ORIGIN || 'http://localhost:5173') 
+      : (origin, callback) => callback(null, true),
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -20,6 +22,6 @@ const io = new Server(server, {
 
 initSocketServer(io);
 
-server.listen(port, () => {
-  console.log(`Pool Multiplayer server listening on port ${port}`);
+server.listen(Number(port), '0.0.0.0', () => {
+  console.log(`Pool Multiplayer server listening on port ${port} (LAN accessible)`);
 });

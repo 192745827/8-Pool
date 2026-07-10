@@ -6,7 +6,7 @@ export const Camera: React.FC = () => {
     <>
       <PerspectiveCamera 
         makeDefault 
-        position={[0, 10, 12]} 
+        position={[0, 6, 7]} 
         fov={45} 
       />
       <OrbitControls 

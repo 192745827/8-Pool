@@ -1,4 +1,3 @@
-import React from 'react';
-declare function Modal(): React.JSX.Element;
+declare function Modal(): import("react/jsx-runtime").JSX.Element;
 export default Modal;
 //# sourceMappingURL=Modal.d.ts.map
