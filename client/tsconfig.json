@@ -9,7 +9,8 @@
       "@/*": ["src/*"]
     },
     "types": ["vite/client"],
-    "composite": false
+    "composite": false,
+    "noEmit": true
   },
   "include": ["src/**/*"],
   "references": [

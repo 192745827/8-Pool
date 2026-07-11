@@ -7,6 +7,7 @@ import Environment from './Environment';
 import PoolTable from './PoolTable';
 import CueStick from './CueStick';
 import Balls from './Balls';
+import { PhysicsWorld, TablePhysics, PocketSensor } from './physics';
 
 export const Scene: React.FC = () => {
   return (
@@ -15,9 +16,13 @@ export const Scene: React.FC = () => {
         <Camera />
         <Lights />
         <Environment />
-        <PoolTable />
+        <PhysicsWorld>
+          <PoolTable />
+          <TablePhysics />
+          <PocketSensor />
+          <Balls />
+        </PhysicsWorld>
         <CueStick />
-        <Balls />
       </Canvas>
     </div>
   );
