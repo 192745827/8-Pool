@@ -1,7 +1,8 @@
 import React from 'react';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import * as THREE from 'three';
 
-export const Camera: React.FC = () => {
+export const CameraController: React.FC = () => {
   return (
     <>
       <PerspectiveCamera 
@@ -13,9 +14,14 @@ export const Camera: React.FC = () => {
         maxPolarAngle={Math.PI / 2.1} 
         minDistance={4} 
         maxDistance={25} 
+        mouseButtons={{
+          LEFT: -1 as any, // Disable left-click rotation (used for shooting)
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.ROTATE, // Use right-click for camera controls
+        }}
       />
     </>
   );
 };
 
-export default Camera;
+export default CameraController;

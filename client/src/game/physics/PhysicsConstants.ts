@@ -21,6 +21,8 @@ export const PhysicsConstants = {
     { id: 'top-middle', position: [0, 0.11, -2.4] as [number, number, number], radius: 0.24 },
     { id: 'bottom-middle', position: [0, 0.11, 2.4] as [number, number, number], radius: 0.24 },
   ],
+
+  CUE_BALL_SPAWN: [-2.5, 0.28, 0] as [number, number, number],
 };
 
 export default PhysicsConstants;
