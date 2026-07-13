@@ -14,13 +14,13 @@ import { PhysicsConstants } from './physics/PhysicsConstants';
 const TurnController: React.FC<{
   cueBallRef: React.RefObject<RapierRigidBody | null>;
   ballRefs: React.MutableRefObject<Map<number, RapierRigidBody>>;
-  turnState: 'aiming' | 'shooting' | 'simulating';
-  setTurnState: (state: 'aiming' | 'shooting' | 'simulating') => void;
+  turnState: 'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving';
+  setTurnState: (state: 'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving') => void;
   cueBallScratched: boolean;
   respawnCueBall: () => void;
 }> = ({ cueBallRef, ballRefs, turnState, setTurnState, cueBallScratched, respawnCueBall }) => {
   useFrame(() => {
-    if (turnState !== 'simulating') return;
+    if (turnState !== 'balls-moving') return;
 
     let anyBallMoving = false;
 
@@ -50,7 +50,7 @@ const TurnController: React.FC<{
       if (cueBallScratched) {
         respawnCueBall();
       } else {
-        setTurnState('aiming');
+        setTurnState('idle');
       }
     }
   });
@@ -69,7 +69,7 @@ export const Scene: React.FC = () => {
   const [activeBalls, setActiveBalls] = useState<number[]>([
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
   ]);
-  const [turnState, setTurnState] = useState<'aiming' | 'shooting' | 'simulating'>('aiming');
+  const [turnState, setTurnState] = useState<'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving'>('idle');
   const [power, setPower] = useState<number>(0);
   const [cueBallScratched, setCueBallScratched] = useState<boolean>(false);
 
@@ -104,7 +104,7 @@ export const Scene: React.FC = () => {
       cueBallRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
       cueBallRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
       setCueBallScratched(false);
-      setTurnState('aiming');
+      setTurnState('idle');
     }
   };
 
@@ -112,7 +112,7 @@ export const Scene: React.FC = () => {
   const handleRestart = () => {
     setActiveBalls([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     setCueBallScratched(false);
-    setTurnState('aiming');
+    setTurnState('idle');
     setPower(0);
     
     if (cueBallRef.current) {
@@ -170,13 +170,25 @@ export const Scene: React.FC = () => {
       {/* 1. Turn State Badge */}
       <div className="absolute top-4 left-4 flex gap-2 items-center pointer-events-none select-none">
         <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-full shadow border transition-all duration-300 ${
-          turnState === 'aiming' 
+          turnState === 'idle'
+            ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+            : turnState === 'aiming' 
             ? 'bg-pool-cyan/10 text-pool-cyan border-pool-cyan/30 shadow-[0_0_10px_rgba(0,240,255,0.15)] animate-pulse'
+            : turnState === 'charging'
+            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.15)] animate-pulse'
             : turnState === 'shooting'
-            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+            ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
             : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
         }`}>
-          {turnState === 'aiming' ? '● AIMING' : turnState === 'shooting' ? '● STRIKING' : '○ SIMULATING'}
+          {turnState === 'idle' 
+            ? '● IDLE' 
+            : turnState === 'aiming' 
+            ? '● AIMING' 
+            : turnState === 'charging' 
+            ? '● CHARGING' 
+            : turnState === 'shooting' 
+            ? '● STRIKING' 
+            : '○ SIMULATING'}
         </span>
         {cueBallScratched && (
           <span className="px-3 py-1 bg-red-600 text-white text-[10px] font-black tracking-widest uppercase rounded-full border border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-bounce">
@@ -221,10 +233,10 @@ export const Scene: React.FC = () => {
       </div>
 
       {/* 3. Pullback Drag Power Bar */}
-      <PowerMeter power={power} visible={turnState === 'aiming'} />
+      <PowerMeter power={power} visible={turnState === 'idle' || turnState === 'aiming' || turnState === 'charging'} />
 
       {/* 4. Controls Tip Banner */}
-      {turnState === 'aiming' && power === 0 && (
+      {(turnState === 'idle' || turnState === 'aiming') && power === 0 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/70 backdrop-blur border border-white/5 rounded-full flex gap-3 text-[10px] font-bold text-slate-300 shadow-md select-none pointer-events-none">
           <span>🖱️ Left-Click & Drag to Pullback</span>
           <span className="text-white/20">|</span>

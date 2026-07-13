@@ -9,8 +9,8 @@ import AimLine from './AimLine';
 
 interface CueControllerProps {
   cueBallRef: React.RefObject<RapierRigidBody | null>;
-  turnState: 'aiming' | 'shooting' | 'simulating';
-  setTurnState: (state: 'aiming' | 'shooting' | 'simulating') => void;
+  turnState: 'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving';
+  setTurnState: (state: 'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving') => void;
   power: number;
   setPower: (power: number) => void;
 }
@@ -33,15 +33,7 @@ export const CueController: React.FC<CueControllerProps> = ({
   const aimAngleRef = useRef(0);
   const pullbackRef = useRef(0);
   const powerRef = useRef(0);
-
   const pauseTimeRef = useRef(0.18); // 180ms pause at peak pullback
-
-  // Reset pause timer when returning to aiming state
-  useEffect(() => {
-    if (turnState === 'aiming') {
-      pauseTimeRef.current = 0.18;
-    }
-  }, [turnState]);
 
   // Sync state power to ref for hot path useFrame access
   useEffect(() => {
@@ -63,33 +55,180 @@ export const CueController: React.FC<CueControllerProps> = ({
     const inputManager = inputManagerRef.current;
     if (!inputManager) return;
 
-    if (turnState === 'aiming') {
-      inputManager.activate((finalPower) => {
-        setTurnState('shooting');
-      });
+    if (turnState === 'idle' || turnState === 'aiming' || turnState === 'charging') {
+      inputManager.activate(() => {}); // Pass no-op callback since transitions are frame-driven
     } else {
       inputManager.deactivate();
     }
-  }, [turnState, setTurnState]);
+  }, [turnState]);
+
+  // Helper to cast shape and render the smart aim line + deflection split vectors
+  const updateSmartAimLine = (cueBallPos: THREE.Vector3) => {
+    const aimLine = aimLineRef.current;
+    if (!aimLine) return;
+
+    aimLine.visible = true;
+
+    const primary = aimLine.getObjectByName('primaryLine') as THREE.Mesh;
+    const ghost = aimLine.getObjectByName('ghostBall') as THREE.Mesh;
+    const targetL = aimLine.getObjectByName('targetLine') as THREE.Mesh;
+    const deflectL = aimLine.getObjectByName('deflectionLine') as THREE.Mesh;
+
+    const dir = new THREE.Vector3(
+      Math.sin(aimAngleRef.current - Math.PI),
+      0,
+      Math.cos(aimAngleRef.current - Math.PI)
+    ).normalize();
+
+    const shape = new rapier.Ball(0.18); // Ball radius 0.18
+    const cueBallCollider = cueBallRef.current?.collider(0);
+
+    const hit = world.castShape(
+      { x: cueBallPos.x, y: cueBallPos.y, z: cueBallPos.z },
+      { x: 0, y: 0, z: 0, w: 1 },
+      { x: dir.x, y: dir.y, z: dir.z },
+      shape,
+      0.0,  // targetDistance
+      15.0, // maxToi (Max lookahead distance)
+      true, // stopAtPenetration
+      undefined,
+      undefined,
+      cueBallCollider || undefined
+    );
+
+    if (hit) {
+      const dist = hit.time_of_impact;
+      const contactPos = new THREE.Vector3().copy(cueBallPos).addScaledVector(dir, dist);
+      
+      const hitColliderParent = hit.collider.parent();
+      const isBall = hitColliderParent && hitColliderParent.isDynamic();
+
+      // A. Primary line to contact point
+      if (primary) {
+        primary.visible = true;
+        primary.position.copy(cueBallPos).add(contactPos).multiplyScalar(0.5);
+        primary.position.y = 0.28 - 0.05;
+        primary.scale.set(1, 1, dist);
+        primary.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
+      }
+
+      // B. Ghost Ball contact outline
+      if (ghost) {
+        ghost.visible = true;
+        ghost.position.copy(contactPos);
+      }
+
+      if (isBall && hitColliderParent) {
+        const rawTargetPos = hitColliderParent.translation();
+        const targetBallPos = new THREE.Vector3(rawTargetPos.x, 0.28, rawTargetPos.z);
+
+        // C. Target ball path line
+        const targetDir = new THREE.Vector3().subVectors(targetBallPos, contactPos).normalize();
+        if (targetL) {
+          targetL.visible = true;
+          targetL.position.copy(contactPos).addScaledVector(targetDir, 0.75);
+          targetL.position.y = 0.28 - 0.05;
+          targetL.scale.set(1, 1, 1.5);
+          targetL.rotation.set(0, Math.atan2(targetDir.x, targetDir.z), 0);
+        }
+
+        // D. Cue ball deflection line
+        const dot = dir.dot(targetDir);
+        const deflectDir = new THREE.Vector3().subVectors(dir, targetDir.clone().multiplyScalar(dot)).normalize();
+        if (deflectL) {
+          deflectL.visible = true;
+          deflectL.position.copy(contactPos).addScaledVector(deflectDir, 0.75);
+          deflectL.position.y = 0.28 - 0.05;
+          deflectL.scale.set(1, 1, 1.5);
+          deflectL.rotation.set(0, Math.atan2(deflectDir.x, deflectDir.z), 0);
+        }
+      } else {
+        if (targetL) targetL.visible = false;
+
+        // Cushion bounce reflection
+        const rawNormal = hit.normal2;
+        const normal = new THREE.Vector3(rawNormal.x, 0, rawNormal.z).normalize();
+        const deflectDir = dir.clone().reflect(normal).normalize();
+
+        if (deflectL) {
+          deflectL.visible = true;
+          deflectL.position.copy(contactPos).addScaledVector(deflectDir, 0.75);
+          deflectL.position.y = 0.28 - 0.05;
+          deflectL.scale.set(1, 1, 1.5);
+          deflectL.rotation.set(0, Math.atan2(deflectDir.x, deflectDir.z), 0);
+        }
+      }
+    } else {
+      // Default line projection if no collision hit
+      const dist = 6.0;
+      const contactPos = new THREE.Vector3().copy(cueBallPos).addScaledVector(dir, dist);
+
+      if (primary) {
+        primary.visible = true;
+        primary.position.copy(cueBallPos).add(contactPos).multiplyScalar(0.5);
+        primary.position.y = 0.28 - 0.05;
+        primary.scale.set(1, 1, dist);
+        primary.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
+      }
+
+      if (ghost) ghost.visible = false;
+      if (targetL) targetL.visible = false;
+      if (deflectL) deflectL.visible = false;
+    }
+  };
 
   useFrame((state, delta) => {
     if (!cueBallRef.current || !inputManagerRef.current) return;
 
     const translation = cueBallRef.current.translation();
     const cueBallPos = new THREE.Vector3(translation.x, 0.28, translation.z);
+    const inputManager = inputManagerRef.current;
 
-    if (turnState === 'aiming') {
-      // 1. Calculate angle from camera ray
-      aimAngleRef.current = InputManager.calculateAimAngle(state.raycaster, cueBallPos);
+    // A. Handle Idle / Aiming states
+    if (turnState === 'idle' || turnState === 'aiming') {
+      // Calculate angle from camera ray
+      const currentAngle = InputManager.calculateAimAngle(state.raycaster, cueBallPos);
+      const angleDiff = Math.abs(currentAngle - aimAngleRef.current);
+      aimAngleRef.current = currentAngle;
 
-      // 2. Fetch current power
-      const currentPower = inputManagerRef.current.getPower();
+      // Transition to aiming when cursor moves
+      if (angleDiff > 0.001) {
+        if (turnState === 'idle') {
+          setTurnState('aiming');
+        }
+      }
+
+      // Transition to charging if player initiates mouse drag
+      if (inputManager.getIsDragging()) {
+        setTurnState('charging');
+      }
+
+      // Position visual cue stick
+      if (cueStickRef.current) {
+        cueStickRef.current.visible = true;
+        cueStickRef.current.position.copy(cueBallPos);
+        cueStickRef.current.rotation.set(0.12, aimAngleRef.current, 0, 'YXZ');
+        
+        const inner = cueStickRef.current.children[0] as THREE.Group;
+        if (inner) {
+          inner.position.z = 0.22;
+        }
+      }
+
+      // Render the smart aim line
+      updateSmartAimLine(cueBallPos);
+    }
+
+    // B. Handle Charging state
+    else if (turnState === 'charging') {
+      const currentPower = inputManager.getPower();
       setPower(currentPower);
-
-      // 3. Compute pullback distance
       pullbackRef.current = (currentPower / 100) * 1.5;
 
-      // 4. Update CueStick position/rotation
+      // Allow aiming adjustment while dragging
+      aimAngleRef.current = InputManager.calculateAimAngle(state.raycaster, cueBallPos);
+
+      // Position visual cue stick at pulled back coordinate
       if (cueStickRef.current) {
         cueStickRef.current.visible = true;
         cueStickRef.current.position.copy(cueBallPos);
@@ -101,126 +240,26 @@ export const CueController: React.FC<CueControllerProps> = ({
         }
       }
 
-      // 5. Calculate Smart Aim Line & deflection paths via Rapier Shape Cast
-      const dir = new THREE.Vector3(
-        Math.sin(aimAngleRef.current - Math.PI),
-        0,
-        Math.cos(aimAngleRef.current - Math.PI)
-      ).normalize();
+      // Render target aim line
+      updateSmartAimLine(cueBallPos);
 
-      const shape = new rapier.Ball(0.18); // Ball radius 0.18
-      const cueBallCollider = cueBallRef.current.collider(0);
-
-      const hit = world.castShape(
-        { x: cueBallPos.x, y: cueBallPos.y, z: cueBallPos.z },
-        { x: 0, y: 0, z: 0, w: 1 },
-        { x: dir.x, y: dir.y, z: dir.z },
-        shape,
-        0.0,  // targetDistance
-        15.0, // maxToi (Max lookahead distance)
-        true, // stopAtPenetration
-        undefined,
-        undefined,
-        cueBallCollider || undefined
-      );
-
-      const aimLine = aimLineRef.current;
-      if (aimLine) {
-        aimLine.visible = true;
-
-        const primary = aimLine.getObjectByName('primaryLine') as THREE.Mesh;
-        const ghost = aimLine.getObjectByName('ghostBall') as THREE.Mesh;
-        const targetL = aimLine.getObjectByName('targetLine') as THREE.Mesh;
-        const deflectL = aimLine.getObjectByName('deflectionLine') as THREE.Mesh;
-
-        if (hit) {
-          const dist = hit.time_of_impact;
-          const contactPos = new THREE.Vector3().copy(cueBallPos).addScaledVector(dir, dist);
-          
-          const hitColliderParent = hit.collider.parent();
-          const isBall = hitColliderParent && hitColliderParent.isDynamic();
-
-          // A. Draw main path to contact point
-          if (primary) {
-            primary.visible = true;
-            primary.position.copy(cueBallPos).add(contactPos).multiplyScalar(0.5);
-            primary.position.y = 0.28 - 0.05;
-            primary.scale.set(1, 1, dist);
-            primary.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
-          }
-
-          // B. Draw Ghost Ball contact sphere outline
-          if (ghost) {
-            ghost.visible = true;
-            ghost.position.copy(contactPos);
-          }
-
-          if (isBall && hitColliderParent) {
-            const rawTargetPos = hitColliderParent.translation();
-            const targetBallPos = new THREE.Vector3(rawTargetPos.x, 0.28, rawTargetPos.z);
-
-            // C. Target ball path: pushed along line of centers at contact
-            const targetDir = new THREE.Vector3().subVectors(targetBallPos, contactPos).normalize();
-            if (targetL) {
-              targetL.visible = true;
-              targetL.position.copy(contactPos).addScaledVector(targetDir, 0.75);
-              targetL.position.y = 0.28 - 0.05;
-              targetL.scale.set(1, 1, 1.5);
-              targetL.rotation.set(0, Math.atan2(targetDir.x, targetDir.z), 0);
-            }
-
-            // D. Cue ball deflection path: perpendicular to line of centers
-            const dot = dir.dot(targetDir);
-            const deflectDir = new THREE.Vector3().subVectors(dir, targetDir.clone().multiplyScalar(dot)).normalize();
-            if (deflectL) {
-              deflectL.visible = true;
-              deflectL.position.copy(contactPos).addScaledVector(deflectDir, 0.75);
-              deflectL.position.y = 0.28 - 0.05;
-              deflectL.scale.set(1, 1, 1.5);
-              deflectL.rotation.set(0, Math.atan2(deflectDir.x, deflectDir.z), 0);
-            }
-
-          } else {
-            // Cushion hit: simple specular reflection vector
-            if (targetL) targetL.visible = false;
-
-            const rawNormal = hit.normal2;
-            const normal = new THREE.Vector3(rawNormal.x, 0, rawNormal.z).normalize();
-            const deflectDir = dir.clone().reflect(normal).normalize();
-
-            if (deflectL) {
-              deflectL.visible = true;
-              deflectL.position.copy(contactPos).addScaledVector(deflectDir, 0.75);
-              deflectL.position.y = 0.28 - 0.05;
-              deflectL.scale.set(1, 1, 1.5);
-              deflectL.rotation.set(0, Math.atan2(deflectDir.x, deflectDir.z), 0);
-            }
-          }
+      // On release, transition to shooting (strike) or return to idle if canceled
+      if (!inputManager.getIsDragging()) {
+        if (currentPower >= 5) {
+          setTurnState('shooting');
         } else {
-          // No contact: extend aim line to max length, hide ghost/split lines
-          const dist = 6.0;
-          const contactPos = new THREE.Vector3().copy(cueBallPos).addScaledVector(dir, dist);
-
-          if (primary) {
-            primary.visible = true;
-            primary.position.copy(cueBallPos).add(contactPos).multiplyScalar(0.5);
-            primary.position.y = 0.28 - 0.05;
-            primary.scale.set(1, 1, dist);
-            primary.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
-          }
-
-          if (ghost) ghost.visible = false;
-          if (targetL) targetL.visible = false;
-          if (deflectL) deflectL.visible = false;
+          setPower(0);
+          setTurnState('idle');
         }
       }
+    }
 
-    } else if (turnState === 'shooting') {
-      // 1. Backswing peak pause
+    // C. Handle Shooting state (Strike Animation + Pause)
+    else if (turnState === 'shooting') {
+      // 1. Backswing peak pause (180ms)
       if (pauseTimeRef.current > 0) {
         pauseTimeRef.current -= delta;
         
-        // Maintain stick visual at its pullback peak during the pause
         if (cueStickRef.current) {
           cueStickRef.current.visible = true;
           cueStickRef.current.position.copy(cueBallPos);
@@ -231,11 +270,11 @@ export const CueController: React.FC<CueControllerProps> = ({
             inner.position.z = 0.22 + pullbackRef.current;
           }
         }
-        return; // Pause execution
+        return; // Wait out the pause
       }
 
       // 2. Strike animation: slide stick forward rapidly
-      const strikeSpeed = 20.0; // Slightly faster for a snappier feel post-pause
+      const strikeSpeed = 20.0;
       pullbackRef.current = Math.max(0, pullbackRef.current - strikeSpeed * delta);
 
       if (cueStickRef.current) {
@@ -253,16 +292,17 @@ export const CueController: React.FC<CueControllerProps> = ({
         aimLineRef.current.visible = false;
       }
 
+      // 3. Contact! Apply impulse and transition to balls-moving
       if (pullbackRef.current === 0) {
-        // Strike contact! Execute physics impulse
-        setTurnState('simulating');
+        setTurnState('balls-moving');
         ShotController.executeShot(cueBallRef, powerRef.current, aimAngleRef.current);
         setPower(0);
-        pauseTimeRef.current = 0.18; // Reset pause time for next shot
+        pauseTimeRef.current = 0.18; // Reset pause timer for next turn
       }
+    }
 
-    } else {
-      // Hide visuals during simulation
+    // D. Handle Balls Moving state (Simulation active)
+    else if (turnState === 'balls-moving') {
       if (cueStickRef.current) {
         cueStickRef.current.visible = false;
       }
