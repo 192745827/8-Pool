@@ -34,6 +34,15 @@ export const CueController: React.FC<CueControllerProps> = ({
   const pullbackRef = useRef(0);
   const powerRef = useRef(0);
 
+  const pauseTimeRef = useRef(0.18); // 180ms pause at peak pullback
+
+  // Reset pause timer when returning to aiming state
+  useEffect(() => {
+    if (turnState === 'aiming') {
+      pauseTimeRef.current = 0.18;
+    }
+  }, [turnState]);
+
   // Sync state power to ref for hot path useFrame access
   useEffect(() => {
     powerRef.current = power;
@@ -207,8 +216,26 @@ export const CueController: React.FC<CueControllerProps> = ({
       }
 
     } else if (turnState === 'shooting') {
-      // Strike animation: slide stick forward rapidly
-      const strikeSpeed = 16.0;
+      // 1. Backswing peak pause
+      if (pauseTimeRef.current > 0) {
+        pauseTimeRef.current -= delta;
+        
+        // Maintain stick visual at its pullback peak during the pause
+        if (cueStickRef.current) {
+          cueStickRef.current.visible = true;
+          cueStickRef.current.position.copy(cueBallPos);
+          cueStickRef.current.rotation.set(0.12, aimAngleRef.current, 0, 'YXZ');
+          
+          const inner = cueStickRef.current.children[0] as THREE.Group;
+          if (inner) {
+            inner.position.z = 0.22 + pullbackRef.current;
+          }
+        }
+        return; // Pause execution
+      }
+
+      // 2. Strike animation: slide stick forward rapidly
+      const strikeSpeed = 20.0; // Slightly faster for a snappier feel post-pause
       pullbackRef.current = Math.max(0, pullbackRef.current - strikeSpeed * delta);
 
       if (cueStickRef.current) {
@@ -231,6 +258,7 @@ export const CueController: React.FC<CueControllerProps> = ({
         setTurnState('simulating');
         ShotController.executeShot(cueBallRef, powerRef.current, aimAngleRef.current);
         setPower(0);
+        pauseTimeRef.current = 0.18; // Reset pause time for next shot
       }
 
     } else {

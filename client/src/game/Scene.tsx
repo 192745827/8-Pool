@@ -135,7 +135,7 @@ export const Scene: React.FC = () => {
     >
       {/* 3D Canvas rendering the environment, physics, and gameplay entities */}
       <Canvas shadows={{ type: THREE.PCFSoftShadowMap }}>
-        <CameraController />
+        <CameraController cueBallRef={cueBallRef} />
         <Lights />
         <Environment />
         <PhysicsWorld>
