@@ -12,6 +12,7 @@ import { PhysicsConstants } from './physics/PhysicsConstants';
 import { GameManager, MatchState, INITIAL_MATCH_STATE } from './rules';
 import { collisionManager } from './physics/CollisionManager';
 import socketService from '../socket/socket';
+import { audioManager } from '../audio';
 
 // Sub-component to monitor ball movement and reset turns on each physics frame
 const TurnController: React.FC<{
@@ -90,9 +91,31 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
   }));
   const [matchState, setMatchState] = useState<MatchState>(gameManagerRef.current.getState());
 
+  const lastFoulRef = useRef(false);
+  const lastStatusRef = useRef<string>('');
+
   useEffect(() => {
     const gm = gameManagerRef.current;
     gm.onStateChange = (nextState) => {
+      // Play foul sound
+      if (nextState.foulOccurred && !lastFoulRef.current) {
+        audioManager.playFoul();
+      }
+      lastFoulRef.current = nextState.foulOccurred;
+
+      // Play win/loss sound on game over
+      if (nextState.status === 'game-over' && lastStatusRef.current !== 'game-over') {
+        const localUserWon = !roomId || 
+          (isHost && nextState.winner === 'host') || 
+          (!isHost && nextState.winner === 'guest');
+        if (localUserWon) {
+          audioManager.playWin();
+        } else {
+          audioManager.playLoss();
+        }
+      }
+      lastStatusRef.current = nextState.status;
+
       setMatchState(nextState);
     };
 
@@ -100,8 +123,10 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
     collisionManager.onCollisionEvent = (ballId1, ballId2) => {
       if (ballId2 === 'cushion') {
         gm.recordCushionCollision(ballId1);
+        audioManager.playCushion(1.0);
       } else {
         gm.recordBallCollision(ballId1, ballId2);
+        audioManager.playCollision(1.0);
       }
     };
 
@@ -145,6 +170,7 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
 
   // Handle pocket collisions from sensor
   const handleBallPocketed = (ballId: number, pocketId: string) => {
+    audioManager.playPocket();
     gameManagerRef.current.recordBallPocketed(ballId);
 
     if (ballId === 0) {

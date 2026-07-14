@@ -7,6 +7,7 @@ import socketService from '../socket/socket';
 import { SOCKET_EVENTS } from '../socket/socketEvents';
 import { GameRoom, SharedUser } from '@pool/shared';
 import Scene from '../game/Scene';
+import { audioManager } from '../audio';
 
 export const Game: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -61,6 +62,7 @@ export const Game: React.FC = () => {
 
     // Join room channel immediately
     socket.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId });
+    audioManager.playRoomJoined();
 
     socket.on(SOCKET_EVENTS.ROOM_UPDATED, (updatedRoom: GameRoom) => {
       setRoom(updatedRoom);
@@ -91,14 +93,18 @@ export const Game: React.FC = () => {
       // Trigger a 3-second countdown transition
       let count = 3;
       setCountdown(count);
+      audioManager.playCountdown(false);
+
       const timer = setInterval(() => {
         count -= 1;
         if (count <= 0) {
           clearInterval(timer);
           setCountdown(null);
           setGameStarted(true);
+          audioManager.playCountdown(true);
         } else {
           setCountdown(count);
+          audioManager.playCountdown(false);
         }
       }, 1000);
     });

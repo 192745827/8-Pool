@@ -52,6 +52,22 @@ export class AudioManager {
     this.sfx.playLoss();
   }
 
+  public playCountdown(isFinal: boolean = false): void {
+    this.sfx.playCountdown(isFinal);
+  }
+
+  public playButtonClick(): void {
+    this.sfx.playButtonClick();
+  }
+
+  public playRoomJoined(): void {
+    this.sfx.playRoomJoined();
+  }
+
+  public playPlayerConnected(): void {
+    this.sfx.playPlayerConnected();
+  }
+
   // ─── MUSIC ACTIONS ───
 
   public startMusic(): void {
@@ -89,4 +105,15 @@ export class AudioManager {
 }
 
 export const audioManager = AudioManager.getInstance();
+
+// Automatically play button click SFX for any interactive buttons in the application
+if (typeof window !== 'undefined') {
+  window.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target && (target.tagName === 'BUTTON' || target.closest('button') || target.classList.contains('clickable'))) {
+      audioManager.playButtonClick();
+    }
+  }, { capture: true });
+}
+
 export default audioManager;

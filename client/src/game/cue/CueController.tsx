@@ -7,8 +7,8 @@ import ShotController from './ShotController';
 import CueStick from './CueStick';
 import AimLine from './AimLine';
 import { GameManager } from '../rules/GameManager';
-
 import socketService from '../../socket/socket';
+import { audioManager } from '../../audio';
 
 interface CueControllerProps {
   cueBallRef: React.RefObject<RapierRigidBody | null>;
@@ -397,6 +397,7 @@ export const CueController: React.FC<CueControllerProps> = ({
       if (pullbackRef.current === 0) {
         gameManager.startNewShot();
         setTurnState('balls-moving');
+        audioManager.playCue(powerRef.current);
         ShotController.executeShot(cueBallRef, powerRef.current, aimAngleRef.current);
         setPower(0);
         pauseTimeRef.current = 0.18; // Reset pause timer for next turn

@@ -4,6 +4,7 @@ import SocketGame from './SocketGame';
 import GameSynchronizer from './GameSynchronizer';
 import EventListeners, { MatchEventListeners } from './EventListeners';
 import Reconnect from './Reconnect';
+import audioManager from '../../audio/AudioManager';
 
 export class MultiplayerManager {
   private roomId: string;
@@ -34,6 +35,14 @@ export class MultiplayerManager {
         if ((serverState as any).balls) {
           GameSynchronizer.syncBalls((serverState as any).balls, turnState, ballRefs);
         }
+      },
+      onPlayerDisconnected: (data) => {
+        console.warn('Opponent player disconnected:', data.message);
+        audioManager.playFoul(); // Alert sound for player drop
+      },
+      onPlayerReconnected: (data) => {
+        console.log('Opponent player reconnected:', data.message);
+        audioManager.playPlayerConnected(); // Chime for rejoin
       },
       ...customListeners,
     };

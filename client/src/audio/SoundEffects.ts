@@ -271,6 +271,117 @@ export class SoundEffects {
       osc.stop(now + idx * 0.16 + 0.62);
     });
   }
+
+  /**
+   * Synthesizes lobby match launch timer beeps.
+   */
+  public playCountdown(isFinal: boolean = false): void {
+    const sfxGain = this.settings.getSfxGain();
+    if (sfxGain <= 0) return;
+
+    const ctx = this.initContext();
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.type = 'sine';
+    const freq = isFinal ? 880 : 440;
+    const duration = isFinal ? 0.25 : 0.12;
+
+    osc.frequency.setValueAtTime(freq, now);
+    gainNode.gain.setValueAtTime(sfxGain * 0.4, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + duration + 0.01);
+  }
+
+  /**
+   * Synthesizes UI click sound.
+   */
+  public playButtonClick(): void {
+    const sfxGain = this.settings.getSfxGain();
+    if (sfxGain <= 0) return;
+
+    const ctx = this.initContext();
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1000, now);
+    gainNode.gain.setValueAtTime(sfxGain * 0.25, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.04);
+  }
+
+  /**
+   * Synthesizes room lobby entrance swell.
+   */
+  public playRoomJoined(): void {
+    const sfxGain = this.settings.getSfxGain();
+    if (sfxGain <= 0) return;
+
+    const ctx = this.initContext();
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+
+    gainNode.gain.setValueAtTime(0.001, now);
+    gainNode.gain.linearRampToValueAtTime(sfxGain * 0.4, now + 0.08);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.26);
+  }
+
+  /**
+   * Synthesizes player connect/reconnect notifications.
+   */
+  public playPlayerConnected(): void {
+    const sfxGain = this.settings.getSfxGain();
+    if (sfxGain <= 0) return;
+
+    const ctx = this.initContext();
+    const now = ctx.currentTime;
+
+    const notes = [523.25, 659.25]; // C5 -> E5
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+
+      gainNode.gain.setValueAtTime(0.001, now);
+      gainNode.gain.linearRampToValueAtTime(sfxGain * 0.35, now + idx * 0.1 + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.2);
+
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc.start(now + idx * 0.1);
+      osc.stop(now + idx * 0.1 + 0.22);
+    });
+  }
 }
 
 export default SoundEffects;
