@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { AuthenticatedSocket } from './socket.types';
 import * as roomService from '../services/room.service';
 import { Room } from '../models/Room';
+import { gameRoomManager, GAME_EVENTS } from './game';
 
 // Shared ready states Map to handle transient status in-memory (not persisted in DB)
 export const roomReadyStates = new Map<string, { hostReady: boolean; guestReady: boolean }>();
@@ -127,9 +128,18 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
 
       // Auto start game trigger
       if (readyState.hostReady && readyState.guestReady) {
+        // Initialize authoritative server-side match session
+        const hostId = room.host._id ? room.host._id.toString() : room.host.toString();
+        const guestId = room.guest && room.guest._id ? room.guest._id.toString() : (room.guest ? room.guest.toString() : '');
+        gameRoomManager.createMatch(room.roomId, hostId, guestId);
+
         // Clean ready states from map since game started
         roomReadyStates.delete(room.roomId.trim().toUpperCase());
         io.to(room.roomId).emit('start-game', roomPayload);
+        io.to(room.roomId).emit(GAME_EVENTS.START_MATCH, {
+          roomId: room.roomId,
+          matchState: gameRoomManager.getMatch(room.roomId)?.getState(),
+        });
       }
     } catch (err: any) {
       socket.emit('room-error', { message: err.message || 'Failed to update ready state' });

@@ -1,20 +1,8 @@
-export const SOCKET_EVENTS = {
-  CONNECT: 'connect',
-  DISCONNECT: 'disconnect',
-  
+export const GAME_EVENTS = {
   // Room Events
   CREATE_ROOM: 'create-room',
   JOIN_ROOM: 'join-room',
   LEAVE_ROOM: 'leave-room',
-  ROOM_CREATED: 'room-created',
-  ROOM_UPDATED: 'room-updated',
-  ROOM_ENDED: 'room-ended',
-  ROOM_ERROR: 'room-error',
-  PLAYER_READY: 'player-ready',
-  PLAYER_NOT_READY: 'player-not-ready',
-  SEND_MESSAGE: 'send-message',
-  RECEIVE_MESSAGE: 'receive-message',
-  START_GAME: 'start-game',
 
   // Match Events
   START_MATCH: 'start-match',
@@ -36,4 +24,5 @@ export const SOCKET_EVENTS = {
   GAME_STATE_UPDATE: 'game-state-update',
 } as const;
 
-export type SocketEvent = typeof SOCKET_EVENTS[keyof typeof SOCKET_EVENTS];
+export type GameEvent = typeof GAME_EVENTS[keyof typeof GAME_EVENTS];
+export default GAME_EVENTS;

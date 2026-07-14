@@ -1,8 +1,9 @@
 import { Server } from 'socket.io';
 import { AuthenticatedSocket } from './socket.types';
+import { registerGameHandlers as registerAuthoritativeGameHandlers } from './game';
 
 export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): void => {
-  // Gameplay physics and match events placeholders for subsequent implementation phases
+  registerAuthoritativeGameHandlers(io, socket);
 };
 
 export default registerGameHandlers;
