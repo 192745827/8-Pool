@@ -90,6 +90,7 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
 
       // Notify room to resume gameplay timer
       io.to(data.roomId).emit(GAME_EVENTS.RESUME_MATCH, { userId, message: 'Opponent reconnected. Match resumed.' });
+      io.to(data.roomId).emit(GAME_EVENTS.PLAYER_RECONNECTED, { userId, message: 'Player reconnected' });
     } catch (err: any) {
       socket.emit('game-error', { message: err.message || 'Reconnection sync failed' });
     }
@@ -102,6 +103,7 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
       reconnectionManager.handleDisconnect(userId);
       // Broadcast pause warning to remaining opponent in room
       io.to(roomId).emit(GAME_EVENTS.PAUSE_MATCH, { userId, message: 'Opponent disconnected. Match paused.' });
+      io.to(roomId).emit(GAME_EVENTS.PLAYER_DISCONNECTED, { userId, message: 'Player disconnected' });
     }
   });
 };
