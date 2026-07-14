@@ -8,6 +8,8 @@ import CueStick from './CueStick';
 import AimLine from './AimLine';
 import { GameManager } from '../rules/GameManager';
 
+import socketService from '../../socket/socket';
+
 interface CueControllerProps {
   cueBallRef: React.RefObject<RapierRigidBody | null>;
   turnState: 'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving';
@@ -15,6 +17,8 @@ interface CueControllerProps {
   power: number;
   setPower: (power: number) => void;
   gameManager: GameManager;
+  roomId?: string;
+  isHost?: boolean;
 }
 
 export const CueController: React.FC<CueControllerProps> = ({
@@ -24,6 +28,8 @@ export const CueController: React.FC<CueControllerProps> = ({
   power,
   setPower,
   gameManager,
+  roomId,
+  isHost,
 }) => {
   const { gl } = useThree();
   const { world, rapier } = useRapier();
@@ -34,6 +40,7 @@ export const CueController: React.FC<CueControllerProps> = ({
   const aimLineRef = useRef<THREE.Group>(null);
 
   const aimAngleRef = useRef(0);
+  const lastEmittedAngle = useRef(0);
   const pullbackRef = useRef(0);
   const powerRef = useRef(0);
   const pauseTimeRef = useRef(0.18); // 180ms pause at peak pullback
@@ -53,17 +60,59 @@ export const CueController: React.FC<CueControllerProps> = ({
     };
   }, [gl]);
 
-  // Activate/deactivate inputs depending on turnState
+  const matchState = gameManager.getState();
+  const isLocalTurn = !roomId ||
+    (isHost && matchState.activePlayer === 'host') ||
+    (!isHost && matchState.activePlayer === 'guest');
+
+  // Activate/deactivate inputs depending on turnState and active player turn
   useEffect(() => {
     const inputManager = inputManagerRef.current;
     if (!inputManager) return;
 
-    if (turnState === 'idle' || turnState === 'aiming' || turnState === 'charging') {
+    if (isLocalTurn && (turnState === 'idle' || turnState === 'aiming' || turnState === 'charging')) {
       inputManager.activate(() => {}); // Pass no-op callback since transitions are frame-driven
     } else {
       inputManager.deactivate();
     }
-  }, [turnState]);
+  }, [turnState, isLocalTurn]);
+
+  // Sync opponent aiming angles from server
+  useEffect(() => {
+    const socket = socketService.getSocket();
+    if (!socket || !roomId || isLocalTurn) return;
+
+    const handleOpponentAim = (data: { userId: string; angle: number }) => {
+      aimAngleRef.current = data.angle;
+      if (turnState === 'idle') {
+        setTurnState('aiming');
+      }
+    };
+
+    socket.on('aim', handleOpponentAim);
+    return () => {
+      socket.off('aim', handleOpponentAim);
+    };
+  }, [roomId, isLocalTurn, turnState]);
+
+  // Sync opponent shot releases from server
+  useEffect(() => {
+    const socket = socketService.getSocket();
+    if (!socket || !roomId || isLocalTurn) return;
+
+    const handleOpponentShoot = (data: { angle: number; power: number }) => {
+      aimAngleRef.current = data.angle;
+      setPower(data.power);
+      powerRef.current = data.power;
+      pullbackRef.current = (data.power / 100) * 1.5;
+      setTurnState('shooting');
+    };
+
+    socket.on('shoot', handleOpponentShoot);
+    return () => {
+      socket.off('shoot', handleOpponentShoot);
+    };
+  }, [roomId, isLocalTurn]);
 
   // Helper to cast shape and render the smart aim line + deflection split vectors
   const updateSmartAimLine = (cueBallPos: THREE.Vector3) => {
@@ -214,20 +263,31 @@ export const CueController: React.FC<CueControllerProps> = ({
 
     // A. Handle Idle / Aiming states
     if (turnState === 'idle' || turnState === 'aiming') {
-      // Calculate angle from camera ray
-      const currentAngle = InputManager.calculateAimAngle(state.raycaster, cueBallPos);
+      let currentAngle = aimAngleRef.current;
+      if (isLocalTurn) {
+        currentAngle = InputManager.calculateAimAngle(state.raycaster, cueBallPos);
+      }
+      
       const angleDiff = Math.abs(currentAngle - aimAngleRef.current);
-      aimAngleRef.current = currentAngle;
+      
+      if (isLocalTurn) {
+        aimAngleRef.current = currentAngle;
+        
+        // Throttled emit to avoid overloading socket link
+        if (Math.abs(currentAngle - lastEmittedAngle.current) > 0.005) {
+          lastEmittedAngle.current = currentAngle;
+          if (roomId) {
+            socketService.emit('aim', { roomId, angle: currentAngle });
+          }
+        }
 
-      // Transition to aiming when cursor moves
-      if (angleDiff > 0.001) {
-        if (turnState === 'idle') {
+        if (angleDiff > 0.001 && turnState === 'idle') {
           setTurnState('aiming');
         }
       }
 
       // Transition to charging if player initiates mouse drag
-      if (inputManager.getIsDragging()) {
+      if (isLocalTurn && inputManager.getIsDragging()) {
         setTurnState('charging');
       }
 
@@ -254,7 +314,17 @@ export const CueController: React.FC<CueControllerProps> = ({
       pullbackRef.current = (currentPower / 100) * 1.5;
 
       // Allow aiming adjustment while dragging
-      aimAngleRef.current = InputManager.calculateAimAngle(state.raycaster, cueBallPos);
+      if (isLocalTurn) {
+        const currentAngle = InputManager.calculateAimAngle(state.raycaster, cueBallPos);
+        aimAngleRef.current = currentAngle;
+        
+        if (Math.abs(currentAngle - lastEmittedAngle.current) > 0.005) {
+          lastEmittedAngle.current = currentAngle;
+          if (roomId) {
+            socketService.emit('aim', { roomId, angle: currentAngle });
+          }
+        }
+      }
 
       // Position visual cue stick at pulled back coordinate
       if (cueStickRef.current) {
@@ -274,6 +344,9 @@ export const CueController: React.FC<CueControllerProps> = ({
       // On release, transition to shooting (strike) or return to idle if canceled
       if (!inputManager.getIsDragging()) {
         if (currentPower >= 5) {
+          if (roomId && isLocalTurn) {
+            socketService.emit('shoot', { roomId, angle: aimAngleRef.current, power: currentPower });
+          }
           setTurnState('shooting');
         } else {
           setPower(0);

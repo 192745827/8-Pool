@@ -33,6 +33,9 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
         throw new Error('Active match session not found');
       }
 
+      // Relay shot payload to opponent client for local visual replication
+      socket.to(data.roomId).emit(GAME_EVENTS.SHOOT, { angle: data.angle, power: data.power });
+
       const result = match.executeShot(userId, data.angle, data.power);
       if (result.error) {
         socket.emit('game-error', { message: result.error });

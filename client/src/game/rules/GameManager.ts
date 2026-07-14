@@ -126,6 +126,17 @@ export class GameManager {
     return this.state;
   }
 
+  /**
+   * Authoritatively synchronizes local client state with the server game state.
+   */
+  public syncServerState(serverState: MatchState): void {
+    this.state = {
+      ...this.state,
+      ...serverState,
+    };
+    this.triggerStateChange();
+  }
+
   private triggerStateChange(): void {
     if (this.onStateChange) {
       this.onStateChange(this.state);

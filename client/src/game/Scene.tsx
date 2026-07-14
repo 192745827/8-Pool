@@ -11,6 +11,7 @@ import { PhysicsWorld, TablePhysics, PocketSensor } from './physics';
 import { PhysicsConstants } from './physics/PhysicsConstants';
 import { GameManager, MatchState, INITIAL_MATCH_STATE } from './rules';
 import { collisionManager } from './physics/CollisionManager';
+import socketService from '../socket/socket';
 
 // Sub-component to monitor ball movement and reset turns on each physics frame
 const TurnController: React.FC<{
@@ -72,7 +73,7 @@ const HUD_BALL_COLORS: Record<number, string> = {
   11: '#f87171', 12: '#c084fc', 13: '#fdba74', 14: '#4ade80', 15: '#fda4af',
 };
 
-export const Scene: React.FC = () => {
+export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId, isHost }) => {
   const [activeBalls, setActiveBalls] = useState<number[]>([
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
   ]);
@@ -109,6 +110,38 @@ export const Scene: React.FC = () => {
       gm.onStateChange = undefined;
     };
   }, []);
+
+  // Synchronize and snap coordinate updates from authoritative server state
+  useEffect(() => {
+    const socket = socketService.getSocket();
+    if (!socket || !roomId) return;
+
+    const handleStateUpdate = (serverState: MatchState & { balls?: Array<{ id: number; x: number; y: number; z: number; isActive: boolean }> }) => {
+      gameManagerRef.current.syncServerState(serverState);
+
+      if (serverState.balls) {
+        serverState.balls.forEach((sBall) => {
+          const body = ballRefs.current.get(sBall.id);
+          if (body) {
+            if (!sBall.isActive) {
+              body.setTranslation({ x: 100 + sBall.id, y: -10, z: 100 }, true);
+              body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+              body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+            } else if (turnState === 'idle') {
+              body.setTranslation({ x: sBall.x, y: sBall.y, z: sBall.z }, true);
+              body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+              body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+            }
+          }
+        });
+      }
+    };
+
+    socket.on('game-state-update', handleStateUpdate);
+    return () => {
+      socket.off('game-state-update', handleStateUpdate);
+    };
+  }, [roomId, turnState]);
 
   // Handle pocket collisions from sensor
   const handleBallPocketed = (ballId: number, pocketId: string) => {
@@ -209,6 +242,8 @@ export const Scene: React.FC = () => {
           power={power}
           setPower={setPower}
           gameManager={gameManagerRef.current}
+          roomId={roomId}
+          isHost={isHost}
         />
       </Canvas>
 
