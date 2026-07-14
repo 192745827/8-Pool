@@ -34,6 +34,8 @@ export const SOCKET_EVENTS = {
   // System Reconnection Hook
   RECONNECT_MATCH: 'reconnect-match',
   GAME_STATE_UPDATE: 'game-state-update',
+  PLAYER_DISCONNECTED: 'player-disconnected',
+  PLAYER_RECONNECTED: 'player-reconnected',
 } as const;
 
 export type SocketEvent = typeof SOCKET_EVENTS[keyof typeof SOCKET_EVENTS];
