@@ -70,8 +70,8 @@ export class AudioManager {
 
   // ─── MUSIC ACTIONS ───
 
-  public startMusic(): void {
-    this.music.start();
+  public startMusic(track: 'home' | 'lobby' | 'game' | 'victory' | 'game-over' = 'home'): void {
+    this.music.start(track);
   }
 
   public stopMusic(): void {
@@ -96,6 +96,10 @@ export class AudioManager {
 
   public setSfxVolume(vol: number): void {
     this.settings.setSfxVolume(vol);
+  }
+
+  public setSfxEnabled(enabled: boolean): void {
+    this.settings.setSfxEnabled(enabled);
   }
 
   public setMuted(muted: boolean): void {

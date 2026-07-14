@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { audioManager } from '../audio';
 
 export const Landing: React.FC = () => {
+  useEffect(() => {
+    audioManager.startMusic('home');
+  }, []);
+
   return (
     <div className="max-w-md mx-auto text-center px-4 py-12 flex flex-col items-center justify-center">
       <div className="text-8xl mb-6 animate-bounce">🎱</div>

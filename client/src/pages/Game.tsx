@@ -30,6 +30,21 @@ export const Game: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Synchronize BGM tracks depending on match stage
+  useEffect(() => {
+    if (gameStarted) {
+      audioManager.startMusic('game');
+    } else {
+      audioManager.startMusic('lobby');
+    }
+  }, [gameStarted]);
+
+  useEffect(() => {
+    return () => {
+      audioManager.stopMusic();
+    };
+  }, []);
+
   // Fetch initial room details and verify connection on mount
   useEffect(() => {
     const fetchRoomDetails = async () => {

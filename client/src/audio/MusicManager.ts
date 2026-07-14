@@ -25,18 +25,27 @@ export class MusicManager {
     return this.ctx;
   }
 
+  private currentTrack: 'home' | 'lobby' | 'game' | 'victory' | 'game-over' | null = null;
+
   /**
-   * Starts synthesizing BGM ambient chord loops.
+   * Starts synthesizing track-specific ambient BGM chord loops.
    */
-  public start(): void {
-    if (this.isActive) return;
+  public start(track: 'home' | 'lobby' | 'game' | 'victory' | 'game-over' = 'home'): void {
+    if (this.isActive && this.currentTrack === track) return;
+
+    // If switching tracks, stop the current one instantly first
+    if (this.isActive) {
+      this.stopInstant();
+    }
+    
     this.isActive = true;
+    this.currentTrack = track;
 
     const musicGain = this.settings.getMusicGain();
     const ctx = this.initContext();
     const now = ctx.currentTime;
 
-    // 1. Create arpeggiation gain controls node
+    // 1. Create gain control node
     this.gainNode = ctx.createGain();
     this.gainNode.gain.setValueAtTime(0, now);
     
@@ -44,9 +53,40 @@ export class MusicManager {
     this.gainNode.gain.linearRampToValueAtTime(musicGain * 0.15, now + 2.0);
     this.gainNode.connect(ctx.destination);
 
-    // 2. Synthesize ambient chord drone (C Major 9)
-    // C2 (65.4Hz), G2 (98.0Hz), C3 (130.8Hz), E3 (164.8Hz), B3 (246.9Hz)
-    const chordFrequencies = [65.41, 97.99, 130.81, 164.81, 246.94];
+    // 2. Select chord frequencies and LFO rates depending on BGM track context
+    let chordFrequencies: number[] = [];
+    let lfoRateMultiplier = 1.0;
+    let volumeMultiplier = 0.04;
+
+    switch (track) {
+      case 'home':
+        // Uplifting warm Major 7 (F -> C tones)
+        chordFrequencies = [87.31, 130.81, 174.61, 220.00, 261.63];
+        lfoRateMultiplier = 1.2;
+        break;
+      case 'lobby':
+        // Suspended anticipation chord
+        chordFrequencies = [73.42, 110.00, 146.83, 196.00, 220.00];
+        lfoRateMultiplier = 0.9;
+        break;
+      case 'game':
+        // Low focus deep pool salon drone (C Major 9)
+        chordFrequencies = [65.41, 97.99, 130.81, 164.81, 246.94];
+        lfoRateMultiplier = 0.7;
+        break;
+      case 'victory':
+        // Bright, fast-cycling triumphant swells
+        chordFrequencies = [130.81, 164.81, 196.00, 261.63, 329.63];
+        lfoRateMultiplier = 2.0;
+        volumeMultiplier = 0.055;
+        break;
+      case 'game-over':
+        // Descending quiet minor key drone
+        chordFrequencies = [65.41, 77.78, 116.54, 130.81, 196.00];
+        lfoRateMultiplier = 0.6;
+        volumeMultiplier = 0.03;
+        break;
+    }
 
     chordFrequencies.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
@@ -54,14 +94,14 @@ export class MusicManager {
 
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, now);
-      oscGain.gain.setValueAtTime(0.04, now);
+      oscGain.gain.setValueAtTime(volumeMultiplier, now);
 
-      // Low Frequency Oscillator (LFO) to create swelling chord wave effects
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
 
       lfo.type = 'sine';
-      lfo.frequency.setValueAtTime(0.05 + idx * 0.02, now); // 0.05Hz to 0.13Hz
+      // Adjust LFO rate based on selected track profile
+      lfo.frequency.setValueAtTime((0.05 + idx * 0.02) * lfoRateMultiplier, now);
       lfoGain.gain.setValueAtTime(0.015, now);
 
       lfo.connect(lfoGain);
@@ -76,6 +116,23 @@ export class MusicManager {
       this.oscillators.push(osc);
       this.oscillators.push(lfo);
     });
+  }
+
+  /**
+   * Helper to instantly dispose oscillators for seamless crossfading.
+   */
+  private stopInstant(): void {
+    this.isActive = false;
+    this.oscillators.forEach((osc) => {
+      try {
+        osc.stop();
+      } catch (e) {}
+    });
+    this.oscillators = [];
+    if (this.gainNode) {
+      this.gainNode.disconnect();
+      this.gainNode = null;
+    }
   }
 
   /**

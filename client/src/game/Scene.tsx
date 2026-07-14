@@ -110,8 +110,10 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
           (!isHost && nextState.winner === 'guest');
         if (localUserWon) {
           audioManager.playWin();
+          audioManager.startMusic('victory');
         } else {
           audioManager.playLoss();
+          audioManager.startMusic('game-over');
         }
       }
       lastStatusRef.current = nextState.status;

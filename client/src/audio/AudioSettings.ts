@@ -3,6 +3,7 @@ export interface AudioConfig {
   musicVolume: number;  // 0 to 100
   sfxVolume: number;    // 0 to 100
   isMuted: boolean;
+  sfxEnabled: boolean;
 }
 
 const LOCAL_STORAGE_KEY = 'eight_pool_audio_settings';
@@ -24,6 +25,7 @@ export class AudioSettings {
           musicVolume: typeof parsed.musicVolume === 'number' ? parsed.musicVolume : 50,
           sfxVolume: typeof parsed.sfxVolume === 'number' ? parsed.sfxVolume : 70,
           isMuted: !!parsed.isMuted,
+          sfxEnabled: parsed.sfxEnabled !== undefined ? !!parsed.sfxEnabled : true,
         };
       }
     } catch (e) {
@@ -34,6 +36,7 @@ export class AudioSettings {
       musicVolume: 50,
       sfxVolume: 70,
       isMuted: false,
+      sfxEnabled: true,
     };
   }
 
@@ -64,6 +67,11 @@ export class AudioSettings {
     this.saveSettings();
   }
 
+  public setSfxEnabled(enabled: boolean): void {
+    this.config.sfxEnabled = enabled;
+    this.saveSettings();
+  }
+
   public setMuted(muted: boolean): void {
     this.config.isMuted = muted;
     this.saveSettings();
@@ -73,7 +81,7 @@ export class AudioSettings {
    * Returns gain node float factor (0.0 to 1.0) for sound effects.
    */
   public getSfxGain(): number {
-    if (this.config.isMuted) return 0;
+    if (this.config.isMuted || !this.config.sfxEnabled) return 0;
     return (this.config.masterVolume / 100) * (this.config.sfxVolume / 100);
   }
 
