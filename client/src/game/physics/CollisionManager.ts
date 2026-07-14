@@ -8,6 +8,9 @@ export class CollisionManager {
   // Callback hooks for the application to bind custom audio play logic
   public onPlaySound?: (type: 'ball-ball' | 'ball-cushion', volume: number) => void;
 
+  // Callback hooks for the gameplay rules evaluation
+  public onCollisionEvent?: (ball1: number, ball2: number | 'cushion') => void;
+
   private constructor() {
     // Private constructor for Singleton pattern
   }
@@ -24,6 +27,23 @@ export class CollisionManager {
    * and plays the appropriate audio response.
    */
   public handleCollision(event: CollisionPayload, type: 'ball-ball' | 'ball-cushion') {
+    // Dispatch collision event callback for gameplay rules
+    if (this.onCollisionEvent) {
+      const body1 = event.target.rigidBodyObject;
+      const body2 = event.other.rigidBodyObject;
+      const ballId1 = body1?.userData?.ballId;
+      if (typeof ballId1 === 'number') {
+        if (type === 'ball-ball') {
+          const ballId2 = body2?.userData?.ballId;
+          if (typeof ballId2 === 'number') {
+            this.onCollisionEvent(ballId1, ballId2);
+          }
+        } else {
+          this.onCollisionEvent(ballId1, 'cushion');
+        }
+      }
+    }
+
     const now = Date.now();
     const key = `${type}-${event.target.rigidBody?.handle}-${event.other.rigidBody?.handle}`;
 

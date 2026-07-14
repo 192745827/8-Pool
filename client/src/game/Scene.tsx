@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { RapierRigidBody } from '@react-three/rapier';
@@ -9,6 +9,8 @@ import { CameraController, CueController, PowerMeter } from './cue';
 import Balls from './Balls';
 import { PhysicsWorld, TablePhysics, PocketSensor } from './physics';
 import { PhysicsConstants } from './physics/PhysicsConstants';
+import { GameManager, MatchState, INITIAL_MATCH_STATE } from './rules';
+import { collisionManager } from './physics/CollisionManager';
 
 // Sub-component to monitor ball movement and reset turns on each physics frame
 const TurnController: React.FC<{
@@ -18,7 +20,9 @@ const TurnController: React.FC<{
   setTurnState: (state: 'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving') => void;
   cueBallScratched: boolean;
   respawnCueBall: () => void;
-}> = ({ cueBallRef, ballRefs, turnState, setTurnState, cueBallScratched, respawnCueBall }) => {
+  gameManager: GameManager;
+  activeBalls: number[];
+}> = ({ cueBallRef, ballRefs, turnState, setTurnState, cueBallScratched, respawnCueBall, gameManager, activeBalls }) => {
   useFrame(() => {
     if (turnState !== 'balls-moving') return;
 
@@ -47,10 +51,13 @@ const TurnController: React.FC<{
 
     // When all balls stop rolling, conclude the turn
     if (!anyBallMoving) {
-      if (cueBallScratched) {
-        respawnCueBall();
-      } else {
-        setTurnState('idle');
+      const nextState = gameManager.endShotSimulation(activeBalls, cueBallScratched);
+      if (nextState.status !== 'game-over') {
+        if (cueBallScratched) {
+          respawnCueBall();
+        } else {
+          setTurnState('idle');
+        }
       }
     }
   });
@@ -76,8 +83,37 @@ export const Scene: React.FC = () => {
   const cueBallRef = useRef<RapierRigidBody | null>(null);
   const ballRefs = useRef<Map<number, RapierRigidBody>>(new Map());
 
+  const gameManagerRef = useRef<GameManager>(new GameManager({
+    ...INITIAL_MATCH_STATE,
+    status: 'break'
+  }));
+  const [matchState, setMatchState] = useState<MatchState>(gameManagerRef.current.getState());
+
+  useEffect(() => {
+    const gm = gameManagerRef.current;
+    gm.onStateChange = (nextState) => {
+      setMatchState(nextState);
+    };
+
+    // Connect Rapier physics collisions to GameManager rule metrics
+    collisionManager.onCollisionEvent = (ballId1, ballId2) => {
+      if (ballId2 === 'cushion') {
+        gm.recordCushionCollision(ballId1);
+      } else {
+        gm.recordBallCollision(ballId1, ballId2);
+      }
+    };
+
+    return () => {
+      collisionManager.onCollisionEvent = undefined;
+      gm.onStateChange = undefined;
+    };
+  }, []);
+
   // Handle pocket collisions from sensor
   const handleBallPocketed = (ballId: number, pocketId: string) => {
+    gameManagerRef.current.recordBallPocketed(ballId);
+
     if (ballId === 0) {
       if (!cueBallScratched) {
         setCueBallScratched(true);
@@ -114,6 +150,11 @@ export const Scene: React.FC = () => {
     setCueBallScratched(false);
     setTurnState('idle');
     setPower(0);
+
+    gameManagerRef.current.resetGame({
+      ...INITIAL_MATCH_STATE,
+      status: 'break'
+    });
     
     if (cueBallRef.current) {
       cueBallRef.current.setTranslation(
@@ -125,8 +166,11 @@ export const Scene: React.FC = () => {
     }
   };
 
-  const remainingObjectBalls = activeBalls.filter((id) => id !== 0);
-  const isGameOver = remainingObjectBalls.length === 0;
+  const handleConfirmPlacement = () => {
+    gameManagerRef.current.resetBallInHand();
+  };
+
+  const isGameOver = matchState.status === 'game-over';
 
   return (
     <div 
@@ -154,6 +198,8 @@ export const Scene: React.FC = () => {
             setTurnState={setTurnState}
             cueBallScratched={cueBallScratched}
             respawnCueBall={respawnCueBall}
+            gameManager={gameManagerRef.current}
+            activeBalls={activeBalls}
           />
         </PhysicsWorld>
         <CueController
@@ -162,13 +208,15 @@ export const Scene: React.FC = () => {
           setTurnState={setTurnState}
           power={power}
           setPower={setPower}
+          gameManager={gameManagerRef.current}
         />
       </Canvas>
 
       {/* ─── MODERN NEON GLOWING HUD OVERLAYS ─── */}
 
-      {/* 1. Turn State Badge */}
+      {/* 1. Turn State & Active Player Badges */}
       <div className="absolute top-4 left-4 flex gap-2 items-center pointer-events-none select-none">
+        {/* Turn State (Aiming, Simulating, etc) */}
         <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-full shadow border transition-all duration-300 ${
           turnState === 'idle'
             ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
@@ -190,14 +238,40 @@ export const Scene: React.FC = () => {
             ? '● STRIKING' 
             : '○ SIMULATING'}
         </span>
-        {cueBallScratched && (
-          <span className="px-3 py-1 bg-red-600 text-white text-[10px] font-black tracking-widest uppercase rounded-full border border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-bounce">
-            ⚠️ SCRATCHED
+
+        {/* Active Player Indicator */}
+        <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-full shadow border transition-all duration-300 ${
+          matchState.activePlayer === 'host'
+            ? 'bg-pool-cyan/15 text-pool-cyan border-pool-cyan/30 shadow-[0_0_8px_rgba(0,240,255,0.1)]'
+            : 'bg-pool-purple/15 text-pool-purple border-pool-purple/30 shadow-[0_0_8px_rgba(147,51,234,0.1)]'
+        }`}>
+          👤 {matchState.activePlayer === 'host' ? 'HOST\'S TURN' : 'GUEST\'S TURN'}
+        </span>
+
+        {/* Ball Group Assignments */}
+        <span className="px-3 py-1 text-[10px] font-bold text-slate-400 bg-slate-900/60 backdrop-blur border border-white/5 rounded-full">
+          HOST: <span className={matchState.hostGroup === 'solids' ? 'text-amber-400 font-extrabold' : matchState.hostGroup === 'stripes' ? 'text-purple-400 font-extrabold' : 'text-slate-500'}>
+            {matchState.hostGroup === 'none' ? 'OPEN' : matchState.hostGroup.toUpperCase()}
           </span>
-        )}
+          <span className="mx-1.5 text-white/10">|</span>
+          GUEST: <span className={matchState.guestGroup === 'solids' ? 'text-amber-400 font-extrabold' : matchState.guestGroup === 'stripes' ? 'text-purple-400 font-extrabold' : 'text-slate-500'}>
+            {matchState.guestGroup === 'none' ? 'OPEN' : matchState.guestGroup.toUpperCase()}
+          </span>
+        </span>
       </div>
 
-      {/* 2. Remaining Object Balls Rack */}
+      {/* 2. Foul Notification Banner */}
+      {matchState.foulOccurred && (
+        <div className="absolute top-16 left-4 bg-rose-500/90 backdrop-blur-md border border-rose-400 rounded-xl px-4 py-2 flex items-center gap-3 text-white font-bold text-xs shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-pulse select-none pointer-events-none">
+          <span className="text-sm">⚠️</span>
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase font-black tracking-wider text-rose-200">FOUL COMMITTED</span>
+            <span>{matchState.foulReason || 'Illegal shot'}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Remaining Object Balls Rack */}
       <div className="absolute top-4 right-4 bg-slate-900/80 backdrop-blur border border-white/10 rounded-xl px-3 py-2 flex items-center gap-2 pointer-events-none select-none shadow-md">
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1">RACK:</span>
         <div className="flex gap-1">
@@ -232,28 +306,46 @@ export const Scene: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Pullback Drag Power Bar */}
+      {/* 4. Pullback Drag Power Bar */}
       <PowerMeter power={power} visible={turnState === 'idle' || turnState === 'aiming' || turnState === 'charging'} />
 
-      {/* 4. Controls Tip Banner */}
-      {(turnState === 'idle' || turnState === 'aiming') && power === 0 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/70 backdrop-blur border border-white/5 rounded-full flex gap-3 text-[10px] font-bold text-slate-300 shadow-md select-none pointer-events-none">
-          <span>🖱️ Left-Click & Drag to Pullback</span>
-          <span className="text-white/20">|</span>
-          <span>🔄 Right-Click & Drag to Orbit Camera</span>
+      {/* 5. Controls Tip Banner */}
+      {matchState.ballInHand ? (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/80 backdrop-blur border border-amber-500/35 rounded-full flex gap-2 text-[10px] font-bold text-amber-300 shadow-md select-none pointer-events-none animate-pulse">
+          <span>🎯 Ball in Hand: Left-Click & Drag Cue Ball to place anywhere on the table</span>
+        </div>
+      ) : (
+        (turnState === 'idle' || turnState === 'aiming') && power === 0 && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/70 backdrop-blur border border-white/5 rounded-full flex gap-3 text-[10px] font-bold text-slate-300 shadow-md select-none pointer-events-none">
+            <span>🖱️ Left-Click & Drag to Pullback</span>
+            <span className="text-white/20">|</span>
+            <span>🔄 Right-Click & Drag to Orbit Camera</span>
+          </div>
+        )
+      )}
+
+      {/* 6. Ball-in-Hand Confirmation HUD Button */}
+      {matchState.ballInHand && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 select-none z-20">
+          <button
+            onClick={handleConfirmPlacement}
+            className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-slate-950 font-display font-black text-xs uppercase tracking-widest rounded-xl shadow-lg transition transform active:scale-95 cursor-pointer shadow-emerald-500/25"
+          >
+            Confirm Placement ✓
+          </button>
         </div>
       )}
 
-      {/* 5. Game Over / Victory Overlay */}
+      {/* 7. Game Over / Victory Overlay */}
       {isGameOver && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md">
           <div className="text-center p-8 bg-slate-900/80 border border-pool-cyan/20 rounded-3xl shadow-[0_0_40px_rgba(0,240,255,0.15)] max-w-sm w-full mx-4">
             <span className="text-6xl animate-bounce block mb-4">🏆</span>
             <h2 className="text-3xl font-black font-display text-white tracking-widest uppercase bg-gradient-to-r from-pool-cyan to-pool-purple bg-clip-text text-transparent">
-              MATCH CLEAR!
+              {matchState.winner === 'host' ? 'HOST WINS!' : 'GUEST WINS!'}
             </h2>
             <p className="text-xs text-slate-400 font-body mt-2 leading-relaxed">
-              Congratulations! You pocketed all 15 object balls and mastered the table!
+              {matchState.foulReason || 'Congratulations! Pockets cleared and game successfully won.'}
             </p>
             <button
               onClick={handleRestart}

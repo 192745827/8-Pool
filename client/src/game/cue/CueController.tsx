@@ -6,6 +6,7 @@ import InputManager from './InputManager';
 import ShotController from './ShotController';
 import CueStick from './CueStick';
 import AimLine from './AimLine';
+import { GameManager } from '../rules/GameManager';
 
 interface CueControllerProps {
   cueBallRef: React.RefObject<RapierRigidBody | null>;
@@ -13,6 +14,7 @@ interface CueControllerProps {
   setTurnState: (state: 'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving') => void;
   power: number;
   setPower: (power: number) => void;
+  gameManager: GameManager;
 }
 
 export const CueController: React.FC<CueControllerProps> = ({
@@ -21,6 +23,7 @@ export const CueController: React.FC<CueControllerProps> = ({
   setTurnState,
   power,
   setPower,
+  gameManager,
 }) => {
   const { gl } = useThree();
   const { world, rapier } = useRapier();
@@ -184,6 +187,31 @@ export const CueController: React.FC<CueControllerProps> = ({
     const cueBallPos = new THREE.Vector3(translation.x, 0.28, translation.z);
     const inputManager = inputManagerRef.current;
 
+    // Handle Ball-in-Hand placement dragging
+    if (gameManager.getState().ballInHand) {
+      if (cueStickRef.current) {
+        cueStickRef.current.visible = false;
+      }
+      if (aimLineRef.current) {
+        aimLineRef.current.visible = false;
+      }
+
+      if (inputManager.getIsDragging()) {
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.28);
+        const target = new THREE.Vector3();
+        state.raycaster.ray.intersectPlane(plane, target);
+
+        // Clamp coordinates within play area cushions
+        const clampedX = Math.min(Math.max(target.x, -4.62), 4.62);
+        const clampedZ = Math.min(Math.max(target.z, -2.12), 2.12);
+
+        cueBallRef.current.setTranslation({ x: clampedX, y: 0.28, z: clampedZ }, true);
+        cueBallRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        cueBallRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      }
+      return; // Suspend standard aiming/power charging during placement
+    }
+
     // A. Handle Idle / Aiming states
     if (turnState === 'idle' || turnState === 'aiming') {
       // Calculate angle from camera ray
@@ -294,6 +322,7 @@ export const CueController: React.FC<CueControllerProps> = ({
 
       // 3. Contact! Apply impulse and transition to balls-moving
       if (pullbackRef.current === 0) {
+        gameManager.startNewShot();
         setTurnState('balls-moving');
         ShotController.executeShot(cueBallRef, powerRef.current, aimAngleRef.current);
         setPower(0);
