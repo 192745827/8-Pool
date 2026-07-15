@@ -4,8 +4,99 @@
 
 :root {
   font-family: 'Outfit', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Space Grotesk', sans-serif;
 }
+
+/* ─── UI THEME OVERRIDES ─── */
+
+/* Light Theme Override Styles */
+.theme-light {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.theme-light body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.theme-light .bg-slate-950 {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.theme-light .bg-slate-900,
+.theme-light .bg-slate-900\/60,
+.theme-light .bg-slate-900\/40,
+.theme-light .bg-slate-900\/80 {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+}
+
+.theme-light .text-white {
+  color: #0f172a !important;
+}
+
+.theme-light .text-slate-400 {
+  color: #64748b !important;
+}
+
+.theme-light .text-slate-300 {
+  color: #475569 !important;
+}
+
+.theme-light .border-white\/5,
+.theme-light .border-white\/10,
+.theme-light .border-white\/15,
+.theme-light .border-white\/20,
+.theme-light .border-white\/35 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.theme-light .bg-slate-900\/40 {
+  background-color: #f1f5f9 !important;
+}
+
+.theme-light .bg-slate-900\/70,
+.theme-light .bg-slate-900\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Neon Cyber Theme Override Styles */
+.theme-neon {
+  background-color: #030008;
+  color: #f8fafc;
+}
+
+.theme-neon body {
+  background-color: #030008;
+}
+
+.theme-neon .bg-slate-950 {
+  background-color: #05000c !important;
+  border-color: rgba(0, 240, 255, 0.25) !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+}
+
+.theme-neon .bg-slate-900,
+.theme-neon .bg-slate-900\/60,
+.theme-neon .bg-slate-900\/40,
+.theme-neon .bg-slate-900\/80 {
+  background-color: #080214 !important;
+  border-color: rgba(189, 0, 255, 0.25) !important;
+  box-shadow: inset 0 0 10px rgba(189, 0, 255, 0.05);
+}
+
+.theme-neon .border-white\/5,
+.theme-neon .border-white\/10,
+.theme-neon .border-white\/15,
+.theme-neon .border-white\/20,
+.theme-neon .border-white\/35 {
+  border-color: rgba(0, 240, 255, 0.15) !important;
+}
+

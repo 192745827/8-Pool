@@ -8,6 +8,7 @@ import { SOCKET_EVENTS } from '../socket/socketEvents';
 import { GameRoom, SharedUser } from '@pool/shared';
 import Scene from '../game/Scene';
 import { audioManager } from '../audio';
+import { ParticleProvider } from '../effects';
 
 export const Game: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -242,7 +243,9 @@ export const Game: React.FC = () => {
 
           {/* 3D Scene Viewport rendered from structured boilerplate */}
           <div className="my-8 max-w-3xl mx-auto">
-            <Scene roomId={roomId} isHost={!!isHost} />
+            <ParticleProvider>
+              <Scene roomId={roomId} isHost={!!isHost} />
+            </ParticleProvider>
           </div>
 
           <div className="flex justify-center items-center gap-8 mb-8">

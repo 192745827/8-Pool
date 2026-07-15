@@ -126,7 +126,9 @@ export class MusicManager {
     this.oscillators.forEach((osc) => {
       try {
         osc.stop();
-      } catch (e) {}
+      } catch (e) {
+        // Intentionally left empty: oscillator may already be stopped
+      }
     });
     this.oscillators = [];
     if (this.gainNode) {
@@ -161,7 +163,9 @@ export class MusicManager {
         this.oscillators.forEach((osc) => {
           try {
             osc.stop();
-          } catch (e) {}
+          } catch (e) {
+            // Intentionally left empty
+          }
         });
         this.oscillators = [];
         if (this.gainNode) {

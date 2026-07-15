@@ -1,16 +1,16 @@
 import React from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
-import Landing from '../pages/Landing';
-import Login from '../pages/Login';
-import Register from '../pages/Register';
-import Dashboard from '../pages/Dashboard';
-import Lobby from '../pages/Lobby';
-import Game from '../pages/Game';
-import Leaderboard from '../pages/Leaderboard';
-import Profile from '../pages/Profile';
-import Settings from '../pages/Settings';
-import NotFound from '../pages/NotFound';
+const Landing = React.lazy(() => import('../pages/Landing'));
+const Login = React.lazy(() => import('../pages/Login'));
+const Register = React.lazy(() => import('../pages/Register'));
+const Dashboard = React.lazy(() => import('../pages/Dashboard'));
+const Lobby = React.lazy(() => import('../pages/Lobby'));
+const Game = React.lazy(() => import('../pages/Game'));
+const Leaderboard = React.lazy(() => import('../pages/Leaderboard'));
+const Profile = React.lazy(() => import('../pages/Profile'));
+const Settings = React.lazy(() => import('../pages/Settings'));
+const NotFound = React.lazy(() => import('../pages/NotFound'));
 
 const router = createBrowserRouter([
   {

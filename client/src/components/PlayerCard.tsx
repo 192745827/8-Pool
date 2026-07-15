@@ -14,7 +14,7 @@ interface PlayerCardProps {
   label?: string;
 }
 
-export const PlayerCard: React.FC<PlayerCardProps> = ({ user, isHost = false, label }) => {
+export const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ user, isHost = false, label }) => {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center p-8 bg-slate-900/30 border border-white/5 border-dashed rounded-2xl min-h-[220px] transition-all duration-300 relative overflow-hidden group">
@@ -89,6 +89,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ user, isHost = false, la
       </div>
     </div>
   );
-};
+});
 
 export default PlayerCard;

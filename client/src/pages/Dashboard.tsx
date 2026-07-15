@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { api } from '../services/api';
+import gsap from 'gsap';
 import StatsCard from '../components/StatsCard';
 import JoinRoomModal from '../components/JoinRoomModal';
 import CreateRoomButton from '../components/CreateRoomButton';
@@ -18,6 +19,7 @@ interface UserProfile {
   wins: number;
   losses: number;
   rank: string;
+  achievements?: string[];
 }
 
 export const Dashboard: React.FC = () => {
@@ -32,6 +34,25 @@ export const Dashboard: React.FC = () => {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isJoinOpen, setIsJoinOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isLoading && containerRef.current) {
+      gsap.fromTo(
+        containerRef.current,
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }
+      );
+      
+      // Also animate Stats Cards in a staggered fashion!
+      gsap.fromTo(
+        '.stats-card-item',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out', delay: 0.15 }
+      );
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -50,6 +71,7 @@ export const Dashboard: React.FC = () => {
           wins: res.data.wins,
           losses: res.data.losses,
           rank: res.data.rank,
+          achievements: res.data.achievements,
         });
       } catch (err) {
         console.error('Auth error on dashboard:', err);
@@ -196,7 +218,7 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto w-full px-4 py-8">
+    <div ref={containerRef} className="max-w-4xl mx-auto w-full px-4 py-8 opacity-0">
       {actionError && (
         <div className="mb-6 p-4 bg-rose-500/15 border border-rose-500/20 text-rose-300 rounded-xl text-sm font-body text-center flex items-center justify-between">
           <span>⚠️ {actionError}</span>
@@ -293,6 +315,25 @@ export const Dashboard: React.FC = () => {
               colorClass="text-rose-400"
             />
           </div>
+
+          {/* Achievements Unlocked Panel */}
+          {profile?.achievements && profile.achievements.length > 0 && (
+            <div className="mt-8 bg-slate-900/40 border border-white/5 p-5 rounded-2xl">
+              <h4 className="text-sm font-bold font-display text-white tracking-wider uppercase mb-3 text-left">
+                🏅 Unlocked Achievements
+              </h4>
+              <div className="flex flex-wrap gap-2 justify-start">
+                {profile.achievements.map((ach: string, idx: number) => (
+                  <span 
+                    key={idx}
+                    className="px-3 py-1 text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/25 rounded-lg shadow-md"
+                  >
+                    🏆 {ach}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Actions Menu */}

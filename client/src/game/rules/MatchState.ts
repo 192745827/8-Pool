@@ -4,6 +4,22 @@ export type BallGroup = 'solids' | 'stripes' | 'none';
 
 export type MatchStatus = 'waiting' | 'break' | 'playing' | 'turn-end' | 'game-over';
 
+export interface PlayerStats {
+  shotsPlayed: number;
+  successfulPots: number;
+  accuracy: number;
+  fouls: number;
+  longestPot: number; // in meters
+  unlockedAchievements: string[];
+}
+
+export interface MatchStats {
+  gameDuration: number; // in seconds
+  winner: PlayerType | null;
+  host: PlayerStats;
+  guest: PlayerStats;
+}
+
 export interface MatchState {
   activePlayer: PlayerType;
   hostGroup: BallGroup;
@@ -12,6 +28,7 @@ export interface MatchState {
   winner: PlayerType | null;
   isFirstShot: boolean;
   ballInHand: boolean;
+  stats?: MatchStats;
   
   // Statistics gathered during a single shot simulation
   pocketedBallsInTurn: number[];

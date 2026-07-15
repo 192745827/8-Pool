@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { api } from '../services/api';
@@ -21,7 +21,7 @@ export const Lobby: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Fetch public rooms list
-  const fetchPublicRooms = async () => {
+  const fetchPublicRooms = useCallback(async () => {
     setIsLoadingRooms(true);
     setError(null);
     try {
@@ -33,11 +33,13 @@ export const Lobby: React.FC = () => {
     } finally {
       setIsLoadingRooms(false);
     }
-  };
+  }, []);
 
   // Initial rooms fetch and socket initialization
   useEffect(() => {
-    fetchPublicRooms();
+    const timer = setTimeout(() => {
+      fetchPublicRooms();
+    }, 0);
 
     const token = localStorage.getItem('token');
     if (token) {
@@ -59,20 +61,21 @@ export const Lobby: React.FC = () => {
     }
 
     return () => {
+      clearTimeout(timer);
       if (socket) {
         socket.off(SOCKET_EVENTS.ROOM_CREATED);
         socket.off(SOCKET_EVENTS.ROOM_ERROR);
       }
     };
-  }, [navigate, setRoom]);
+  }, [navigate, setRoom, fetchPublicRooms]);
 
-  const handleCreateRoom = (isPrivate: boolean) => {
+  const handleCreateRoom = useCallback((isPrivate: boolean) => {
     setIsActionLoading(true);
     setError(null);
     socketService.emit(SOCKET_EVENTS.CREATE_ROOM, { isPrivate });
-  };
+  }, []);
 
-  const handleJoinRoom = async (roomId: string) => {
+  const handleJoinRoom = useCallback(async (roomId: string) => {
     setJoiningRoomId(roomId);
     setError(null);
     
@@ -102,7 +105,7 @@ export const Lobby: React.FC = () => {
     socket.on(SOCKET_EVENTS.ROOM_ERROR, handleError);
 
     socketService.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId: roomId.trim().toUpperCase() });
-  };
+  }, [navigate, setRoom]);
 
   return (
     <div className="max-w-4xl mx-auto w-full px-4 py-8">

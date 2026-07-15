@@ -3,6 +3,143 @@ import { AuthenticatedSocket } from '../socket.types';
 import { gameRoomManager } from './GameRoomManager';
 import { reconnectionManager } from './ReconnectionManager';
 import { GAME_EVENTS } from './GameEvents';
+import { User } from '../../models/User';
+
+const getRankByXp = (xp: number): string => {
+  const level = Math.floor(xp / 1000) + 1;
+  if (level >= 17) return 'Grandmaster';
+  if (level >= 12) return 'Master';
+  if (level >= 8) return 'Pro';
+  if (level >= 5) return 'Semi-Pro';
+  if (level >= 3) return 'Amateur';
+  return 'Beginner';
+};
+
+const updatePlayerProgression = async (
+  hostId: string,
+  guestId: string,
+  winnerRole: 'host' | 'guest' | null,
+  matchDetails: {
+    hostFouls: number;
+    guestFouls: number;
+    hostPots: number;
+    guestPots: number;
+    hostMaxCombo: number;
+    guestMaxCombo: number;
+    hostPocketedOnBreak: boolean;
+    guestPocketedOnBreak: boolean;
+  }
+): Promise<{ hostUnlocked: string[]; guestUnlocked: string[] }> => {
+  try {
+    const hostUser = await User.findById(hostId);
+    const guestUser = await User.findById(guestId);
+
+    const hostUnlocked: string[] = [];
+    const guestUnlocked: string[] = [];
+
+    if (hostUser && guestUser) {
+      const checkUnlock = (user: any, ach: string) => {
+        if (!user.achievements) {
+          user.achievements = [];
+        }
+        if (!user.achievements.includes(ach)) {
+          user.achievements.push(ach);
+          return true;
+        }
+        return false;
+      };
+
+      if (winnerRole === 'host') {
+        // Host wins: +100 XP, +250 Coins
+        hostUser.xp += 100;
+        hostUser.coins += 250;
+        hostUser.wins += 1;
+        hostUser.rank = getRankByXp(hostUser.xp);
+
+        // Guest loses: +30 XP, +50 Coins
+        guestUser.xp += 30;
+        guestUser.coins += 50;
+        guestUser.losses += 1;
+        guestUser.rank = getRankByXp(guestUser.xp);
+
+        // Host Achievements checks:
+        if (hostUser.wins === 1) {
+          if (checkUnlock(hostUser, 'First Win')) hostUnlocked.push('First Win');
+        }
+        if (hostUser.wins === 10) {
+          if (checkUnlock(hostUser, '10 Wins')) hostUnlocked.push('10 Wins');
+        }
+        if (hostUser.wins === 50) {
+          if (checkUnlock(hostUser, '50 Wins')) hostUnlocked.push('50 Wins');
+        }
+        if (matchDetails.hostFouls === 0) {
+          if (checkUnlock(hostUser, 'No Fouls')) hostUnlocked.push('No Fouls');
+        }
+        if (matchDetails.guestPots === 0) {
+          if (checkUnlock(hostUser, 'Perfect Game')) hostUnlocked.push('Perfect Game');
+        }
+        if (matchDetails.hostPocketedOnBreak) {
+          if (checkUnlock(hostUser, 'Break Master')) hostUnlocked.push('Break Master');
+        }
+        if (matchDetails.hostMaxCombo >= 3) {
+          if (checkUnlock(hostUser, 'Combo King')) hostUnlocked.push('Combo King');
+        }
+
+      } else if (winnerRole === 'guest') {
+        // Guest wins: +100 XP, +250 Coins
+        guestUser.xp += 100;
+        guestUser.coins += 250;
+        guestUser.wins += 1;
+        guestUser.rank = getRankByXp(guestUser.xp);
+
+        // Host loses: +30 XP, +50 Coins
+        hostUser.xp += 30;
+        hostUser.coins += 50;
+        hostUser.losses += 1;
+        hostUser.rank = getRankByXp(hostUser.xp);
+
+        // Guest Achievements checks:
+        if (guestUser.wins === 1) {
+          if (checkUnlock(guestUser, 'First Win')) guestUnlocked.push('First Win');
+        }
+        if (guestUser.wins === 10) {
+          if (checkUnlock(guestUser, '10 Wins')) guestUnlocked.push('10 Wins');
+        }
+        if (guestUser.wins === 50) {
+          if (checkUnlock(guestUser, '50 Wins')) guestUnlocked.push('50 Wins');
+        }
+        if (matchDetails.guestFouls === 0) {
+          if (checkUnlock(guestUser, 'No Fouls')) guestUnlocked.push('No Fouls');
+        }
+        if (matchDetails.hostPots === 0) {
+          if (checkUnlock(guestUser, 'Perfect Game')) guestUnlocked.push('Perfect Game');
+        }
+        if (matchDetails.guestPocketedOnBreak) {
+          if (checkUnlock(guestUser, 'Break Master')) guestUnlocked.push('Break Master');
+        }
+        if (matchDetails.guestMaxCombo >= 3) {
+          if (checkUnlock(guestUser, 'Combo King')) guestUnlocked.push('Combo King');
+        }
+      }
+
+      // Universal checks:
+      if (hostUser.wins + hostUser.losses === 100) {
+        if (checkUnlock(hostUser, '100 Matches')) hostUnlocked.push('100 Matches');
+      }
+      if (guestUser.wins + guestUser.losses === 100) {
+        if (checkUnlock(guestUser, '100 Matches')) guestUnlocked.push('100 Matches');
+      }
+
+      await hostUser.save();
+      await guestUser.save();
+    }
+
+    return { hostUnlocked, guestUnlocked };
+  } catch (error) {
+    console.error('Error updating player match rewards & achievements:', error);
+    return { hostUnlocked: [], guestUnlocked: [] };
+  }
+};
 
 export * from './GameEvents';
 export * from './GameState';
@@ -46,7 +183,7 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
       reconnectionManager.registerPlayer(userId, data.roomId, socket.id);
 
       // Emit granular updates to clients as specified in the architecture
-      io.to(data.roomId).emit(GAME_EVENTS.BALL_UPDATE, { balls: result.state.balls });
+      io.to(data.roomId).compress(true).emit(GAME_EVENTS.BALL_UPDATE, { balls: result.state.balls });
       io.to(data.roomId).emit(GAME_EVENTS.TURN_UPDATE, { activePlayer: result.state.activePlayer });
       io.to(data.roomId).emit(GAME_EVENTS.SCORE_UPDATE, {
         hostGroup: result.state.hostGroup,
@@ -62,10 +199,25 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
           winner: result.state.winner,
           reason: result.state.foulReason,
         });
+
+        // Trigger authoritative player rewards & achievements updates
+        updatePlayerProgression(
+          match.getHostUserId(),
+          match.getGuestUserId(),
+          result.state.winner,
+          match.getAchievementDetails()
+        ).then(({ hostUnlocked, guestUnlocked }) => {
+          if (result.state.stats) {
+            result.state.stats.host.unlockedAchievements = hostUnlocked;
+            result.state.stats.guest.unlockedAchievements = guestUnlocked;
+          }
+          // Re-emit updated state snapshots
+          io.to(data.roomId).compress(true).emit(GAME_EVENTS.GAME_STATE_UPDATE, result.state);
+        });
       }
 
       // Keep GAME_STATE_UPDATE as full state fallback
-      io.to(data.roomId).emit(GAME_EVENTS.GAME_STATE_UPDATE, result.state);
+      io.to(data.roomId).compress(true).emit(GAME_EVENTS.GAME_STATE_UPDATE, result.state);
     } catch (err: any) {
       socket.emit('game-error', { message: err.message || 'Shot execution failed' });
     }
@@ -89,7 +241,7 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
       socket.join(data.roomId);
 
       // Sync player with complete authoritative game snapshot
-      socket.emit(GAME_EVENTS.GAME_STATE_UPDATE, match.getState());
+      socket.compress(true).emit(GAME_EVENTS.GAME_STATE_UPDATE, match.getState());
 
       // Notify room to resume gameplay timer
       io.to(data.roomId).emit(GAME_EVENTS.RESUME_MATCH, { userId, message: 'Opponent reconnected. Match resumed.' });

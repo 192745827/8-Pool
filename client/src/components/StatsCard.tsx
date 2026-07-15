@@ -8,7 +8,7 @@ interface StatsCardProps {
   colorClass?: string;
 }
 
-export const StatsCard: React.FC<StatsCardProps> = ({
+export const StatsCard: React.FC<StatsCardProps> = React.memo(({
   label,
   value,
   icon,
@@ -16,7 +16,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   colorClass = 'text-white',
 }) => {
   return (
-    <div className="p-5 bg-slate-900/60 border border-white/10 backdrop-blur-xl rounded-2xl shadow-xl flex flex-col justify-between hover:border-pool-cyan/40 hover:shadow-pool-cyan/5 transition-all duration-300 transform hover:-translate-y-1">
+    <div className="stats-card-item opacity-0 p-5 bg-slate-900/60 border border-white/10 backdrop-blur-xl rounded-2xl shadow-xl flex flex-col justify-between hover:border-pool-cyan/40 hover:shadow-pool-cyan/5 transition-all duration-300 transform hover:-translate-y-1">
       <div className="flex justify-between items-start">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider font-display">
           {label}
@@ -37,6 +37,6 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default StatsCard;

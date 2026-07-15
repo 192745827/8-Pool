@@ -11,6 +11,7 @@ export interface IUser extends Document {
   wins: number;
   losses: number;
   rank: string;
+  achievements: string[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword: (password: string) => Promise<boolean>;
@@ -83,6 +84,10 @@ const UserSchema: Schema = new Schema(
       type: String,
       default: 'Beginner',
     },
+    achievements: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,
@@ -91,13 +96,12 @@ const UserSchema: Schema = new Schema(
 
 // Pre-save password hashing hook
 UserSchema.pre('save', async function (this: any) {
-  const user = this;
-  if (!user.isModified('password')) {
+  if (!this.isModified('password')) {
     return;
   }
 
   const salt = await bcrypt.genSalt(10);
-  user.password = await bcrypt.hash(user.password || '', salt);
+  this.password = await bcrypt.hash(this.password || '', salt);
 });
 
 // Compare password method

@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { RapierRigidBody } from '@react-three/rapier';
+import gsap from 'gsap';
 
 interface CameraControllerProps {
   cueBallRef: React.RefObject<RapierRigidBody | null>;
@@ -10,6 +11,18 @@ interface CameraControllerProps {
 
 export const CameraController: React.FC<CameraControllerProps> = ({ cueBallRef }) => {
   const orbitControlsRef = useRef<any>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera>(null);
+
+  useEffect(() => {
+    if (cameraRef.current) {
+      // Dramatic camera sweep on match start
+      gsap.fromTo(
+        cameraRef.current.position,
+        { x: 12, y: 12, z: 15 },
+        { x: 0, y: 6, z: 7, duration: 2.5, ease: 'power2.out' }
+      );
+    }
+  }, []);
 
   useFrame(() => {
     if (!cueBallRef.current || !orbitControlsRef.current) return;
@@ -29,6 +42,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({ cueBallRef }
   return (
     <>
       <PerspectiveCamera 
+        ref={cameraRef}
         makeDefault 
         position={[0, 6, 7]} 
         fov={45} 

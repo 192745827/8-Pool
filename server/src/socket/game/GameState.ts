@@ -10,6 +10,22 @@ export type PlayerType = 'host' | 'guest';
 export type BallGroup = 'solids' | 'stripes' | 'none';
 export type MatchStatus = 'waiting' | 'break' | 'playing' | 'turn-end' | 'game-over';
 
+export interface PlayerStats {
+  shotsPlayed: number;
+  successfulPots: number;
+  accuracy: number;
+  fouls: number;
+  longestPot: number; // in meters
+  unlockedAchievements: string[];
+}
+
+export interface MatchStats {
+  gameDuration: number; // in seconds
+  winner: PlayerType | null;
+  host: PlayerStats;
+  guest: PlayerStats;
+}
+
 export interface AuthoritativeGameState {
   roomId: string;
   activePlayer: PlayerType;
@@ -20,6 +36,7 @@ export interface AuthoritativeGameState {
   isFirstShot: boolean;
   ballInHand: boolean;
   balls: BallState[];
+  stats?: MatchStats;
   
   // Turn metrics gathered during simulation
   firstBallHit: number | null;

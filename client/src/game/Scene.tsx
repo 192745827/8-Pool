@@ -13,6 +13,9 @@ import { GameManager, MatchState, INITIAL_MATCH_STATE } from './rules';
 import { collisionManager } from './physics/CollisionManager';
 import socketService from '../socket/socket';
 import { audioManager } from '../audio';
+import { useParticles, Glow, Trail, Confetti, PocketEffect } from '../effects';
+import GameLoader from '../components/GameLoader';
+import useSettingsStore from '../store/useSettingsStore';
 
 // Sub-component to monitor ball movement and reset turns on each physics frame
 const TurnController: React.FC<{
@@ -74,21 +77,50 @@ const HUD_BALL_COLORS: Record<number, string> = {
   11: '#f87171', 12: '#c084fc', 13: '#fdba74', 14: '#4ade80', 15: '#fda4af',
 };
 
+const FpsLimiter: React.FC = () => {
+  const fpsLimit = useSettingsStore((state) => state.settings.fpsLimit);
+  const lastTime = useRef(0);
+
+  useFrame(({ gl, scene, camera }) => {
+    if (fpsLimit === 'unlimited') {
+      gl.render(scene, camera);
+      return;
+    }
+
+    const limit = fpsLimit === '30' ? 30 : 60;
+    const interval = 1000 / limit;
+    const now = performance.now();
+    const delta = now - lastTime.current;
+
+    if (delta >= interval) {
+      gl.render(scene, camera);
+      lastTime.current = now - (delta % interval);
+    }
+  }, 1);
+
+  return null;
+};
+
 export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId, isHost }) => {
+  const graphicsQuality = useSettingsStore((state) => state.settings.graphicsQuality);
   const [activeBalls, setActiveBalls] = useState<number[]>([
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
   ]);
   const [turnState, setTurnState] = useState<'idle' | 'aiming' | 'charging' | 'shooting' | 'balls-moving'>('idle');
   const [power, setPower] = useState<number>(0);
   const [cueBallScratched, setCueBallScratched] = useState<boolean>(false);
+  const [hasEntered, setHasEntered] = useState<boolean>(false);
 
   const cueBallRef = useRef<RapierRigidBody | null>(null);
   const ballRefs = useRef<Map<number, RapierRigidBody>>(new Map());
+
+  const { bursts, confettiActive, triggerPocketBurst, triggerConfetti, clearBurst } = useParticles();
 
   const gameManagerRef = useRef<GameManager>(new GameManager({
     ...INITIAL_MATCH_STATE,
     status: 'break'
   }));
+  // eslint-disable-next-line react-hooks/refs
   const [matchState, setMatchState] = useState<MatchState>(gameManagerRef.current.getState());
 
   const lastFoulRef = useRef(false);
@@ -111,6 +143,7 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
         if (localUserWon) {
           audioManager.playWin();
           audioManager.startMusic('victory');
+          triggerConfetti(true);
         } else {
           audioManager.playLoss();
           audioManager.startMusic('game-over');
@@ -173,6 +206,13 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
   // Handle pocket collisions from sensor
   const handleBallPocketed = (ballId: number, pocketId: string) => {
     audioManager.playPocket();
+
+    const body = ballRefs.current.get(ballId);
+    if (body) {
+      const pos = body.translation();
+      triggerPocketBurst(pos.x, 0.28, pos.z, ballId === 0 ? '#ffffff' : HUD_BALL_COLORS[ballId] || '#00f0ff');
+    }
+
     gameManagerRef.current.recordBallPocketed(ballId);
 
     if (ballId === 0) {
@@ -238,8 +278,16 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
       className="w-full aspect-[2/1] bg-slate-950 border-4 border-amber-900 rounded-3xl relative overflow-hidden shadow-[inset_0_0_30px_rgba(0,0,0,0.8)]"
       onContextMenu={(e) => e.preventDefault()}
     >
+      {!hasEntered && (
+        <GameLoader onEnter={() => setHasEntered(true)} />
+      )}
       {/* 3D Canvas rendering the environment, physics, and gameplay entities */}
-      <Canvas shadows={{ type: THREE.PCFSoftShadowMap }}>
+      <Canvas 
+        shadows={graphicsQuality === 'low' ? false : { type: THREE.PCFSoftShadowMap }}
+        dpr={graphicsQuality === 'low' ? 1 : [1, 2]}
+        gl={{ antialias: graphicsQuality !== 'low' }}
+      >
+        <FpsLimiter />
         <CameraController cueBallRef={cueBallRef} />
         <Lights />
         <Environment />
@@ -259,6 +307,7 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
             setTurnState={setTurnState}
             cueBallScratched={cueBallScratched}
             respawnCueBall={respawnCueBall}
+            // eslint-disable-next-line react-hooks/refs
             gameManager={gameManagerRef.current}
             activeBalls={activeBalls}
           />
@@ -269,10 +318,26 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
           setTurnState={setTurnState}
           power={power}
           setPower={setPower}
+          // eslint-disable-next-line react-hooks/refs
           gameManager={gameManagerRef.current}
           roomId={roomId}
           isHost={isHost}
         />
+
+        {/* 3D Visual Effects Highlights */}
+        <Glow />
+        <Trail targetRef={cueBallRef} />
+        <Confetti active={confettiActive} />
+        {bursts.map((b) => (
+          <PocketEffect
+            key={b.id}
+            x={b.x}
+            y={b.y}
+            z={b.z}
+            color={b.color}
+            onComplete={() => clearBurst(b.id)}
+          />
+        ))}
       </Canvas>
 
       {/* ─── MODERN NEON GLOWING HUD OVERLAYS ─── */}
@@ -401,18 +466,111 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
 
       {/* 7. Game Over / Victory Overlay */}
       {isGameOver && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md">
-          <div className="text-center p-8 bg-slate-900/80 border border-pool-cyan/20 rounded-3xl shadow-[0_0_40px_rgba(0,240,255,0.15)] max-w-sm w-full mx-4">
-            <span className="text-6xl animate-bounce block mb-4">🏆</span>
-            <h2 className="text-3xl font-black font-display text-white tracking-widest uppercase bg-gradient-to-r from-pool-cyan to-pool-purple bg-clip-text text-transparent">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md overflow-y-auto py-4">
+          <div className="p-6 bg-slate-900/90 border border-pool-cyan/20 rounded-3xl shadow-[0_0_40px_rgba(0,240,255,0.2)] max-w-2xl w-full mx-4 text-center">
+            <span className="text-4xl animate-bounce block mb-2">🏆</span>
+            <h2 className="text-2xl font-black font-display text-white tracking-widest uppercase bg-gradient-to-r from-pool-cyan to-pool-purple bg-clip-text text-transparent">
               {matchState.winner === 'host' ? 'HOST WINS!' : 'GUEST WINS!'}
             </h2>
-            <p className="text-xs text-slate-400 font-body mt-2 leading-relaxed">
-              {matchState.foulReason || 'Congratulations! Pockets cleared and game successfully won.'}
+            <p className="text-[10px] text-slate-400 font-body leading-relaxed mt-1">
+              {matchState.foulReason || 'Congratulations! Match completed.'}
             </p>
+
+            {/* Side-by-side Stats Grid */}
+            {matchState.stats && (
+              <div className="grid grid-cols-3 gap-4 mt-6 text-left border-y border-white/5 py-4">
+                {/* Host Column */}
+                <div className="space-y-2 bg-white/5 p-3 rounded-xl border border-pool-cyan/10">
+                  <div className="text-center font-display text-xs font-black text-pool-cyan border-b border-pool-cyan/15 pb-1 uppercase tracking-wider">
+                    Host (Solids)
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Shots:</span>
+                    <span className="font-extrabold text-white">{matchState.stats.host.shotsPlayed}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Potted:</span>
+                    <span className="font-extrabold text-white">{matchState.stats.host.successfulPots}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Accuracy:</span>
+                    <span className="font-extrabold text-pool-cyan">{matchState.stats.host.accuracy}%</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Fouls:</span>
+                    <span className="font-extrabold text-rose-400">{matchState.stats.host.fouls}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Longest Pot:</span>
+                    <span className="font-extrabold text-amber-400">{matchState.stats.host.longestPot}m</span>
+                  </div>
+                  {matchState.stats.host.unlockedAchievements && matchState.stats.host.unlockedAchievements.length > 0 && (
+                    <div className="mt-2 pt-1.5 border-t border-white/5 text-[9px] text-amber-400 font-bold leading-normal">
+                      🏆 UNLOCKED: {matchState.stats.host.unlockedAchievements.join(', ')}
+                    </div>
+                  )}
+                </div>
+
+                {/* Match Summary Column */}
+                <div className="flex flex-col items-center justify-center text-center space-y-3">
+                  <div>
+                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                      Duration
+                    </div>
+                    <div className="text-lg font-black text-white font-display">
+                      {Math.floor(matchState.stats.gameDuration / 60)}m {matchState.stats.gameDuration % 60}s
+                    </div>
+                  </div>
+                  <div className="w-full border-t border-white/5 pt-2">
+                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                      Result
+                    </div>
+                    <div className="text-[10px] font-bold text-emerald-400">
+                      WIN: {matchState.winner === 'host' ? 'Host' : 'Guest'}
+                    </div>
+                    <div className="text-[10px] font-bold text-rose-400">
+                      LOSE: {matchState.winner === 'host' ? 'Guest' : 'Host'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Guest Column */}
+                <div className="space-y-2 bg-white/5 p-3 rounded-xl border border-pool-purple/10">
+                  <div className="text-center font-display text-xs font-black text-pool-purple border-b border-pool-purple/15 pb-1 uppercase tracking-wider">
+                    Guest (Stripes)
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Shots:</span>
+                    <span className="font-extrabold text-white">{matchState.stats.guest.shotsPlayed}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Potted:</span>
+                    <span className="font-extrabold text-white">{matchState.stats.guest.successfulPots}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Accuracy:</span>
+                    <span className="font-extrabold text-pool-purple">{matchState.stats.guest.accuracy}%</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Fouls:</span>
+                    <span className="font-extrabold text-rose-400">{matchState.stats.guest.fouls}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-300">
+                    <span>Longest Pot:</span>
+                    <span className="font-extrabold text-amber-400">{matchState.stats.guest.longestPot}m</span>
+                  </div>
+                  {matchState.stats.guest.unlockedAchievements && matchState.stats.guest.unlockedAchievements.length > 0 && (
+                    <div className="mt-2 pt-1.5 border-t border-white/5 text-[9px] text-amber-400 font-bold leading-normal">
+                      🏆 UNLOCKED: {matchState.stats.guest.unlockedAchievements.join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleRestart}
-              className="mt-6 w-full py-3 bg-gradient-to-r from-pool-cyan to-pool-cyan/85 hover:brightness-110 text-pool-dark font-display font-black text-xs uppercase tracking-widest rounded-xl shadow-lg transition transform active:scale-95 cursor-pointer shadow-pool-cyan/25"
+              className="mt-6 w-full py-2.5 bg-gradient-to-r from-pool-cyan to-pool-cyan/85 hover:brightness-110 text-pool-dark font-display font-black text-xs uppercase tracking-widest rounded-xl shadow-lg transition transform active:scale-95 cursor-pointer shadow-pool-cyan/25"
             >
               Play Again 🎱
             </button>

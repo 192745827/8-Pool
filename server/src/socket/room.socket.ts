@@ -50,7 +50,7 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
       socket.join(room.roomId);
       
       // Reply to host with ready states appended
-      socket.emit('room-created', serializeRoomWithReadyState(room));
+      socket.compress(true).emit('room-created', serializeRoomWithReadyState(room));
     } catch (err: any) {
       socket.emit('room-error', { message: err.message || 'Failed to create room via socket' });
     }
@@ -65,7 +65,7 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
       socket.join(room.roomId);
       
       // Broadcast updated room status to all players in the room channel
-      io.to(room.roomId).emit('room-updated', serializeRoomWithReadyState(room));
+      io.to(room.roomId).compress(true).emit('room-updated', serializeRoomWithReadyState(room));
     } catch (err: any) {
       socket.emit('room-error', { message: err.message || 'Failed to join room via socket' });
     }
@@ -86,7 +86,7 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
         const readyState = getRoomReadyState(data.roomId);
         readyState.guestReady = false;
 
-        io.to(data.roomId).emit('room-updated', serializeRoomWithReadyState(updatedRoom));
+        io.to(data.roomId).compress(true).emit('room-updated', serializeRoomWithReadyState(updatedRoom));
       }
     } catch (err: any) {
       socket.emit('room-error', { message: err.message || 'Failed to leave room' });
@@ -124,7 +124,7 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
       const roomPayload = serializeRoomWithReadyState(populatedRoom);
 
       // Sync ready updates with the room
-      io.to(room.roomId).emit('room-updated', roomPayload);
+      io.to(room.roomId).compress(true).emit('room-updated', roomPayload);
 
       // Auto start game trigger
       if (readyState.hostReady && readyState.guestReady) {
@@ -135,7 +135,7 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
 
         // Clean ready states from map since game started
         roomReadyStates.delete(room.roomId.trim().toUpperCase());
-        io.to(room.roomId).emit('start-game', roomPayload);
+        io.to(room.roomId).compress(true).emit('start-game', roomPayload);
         io.to(room.roomId).emit(GAME_EVENTS.START_MATCH, {
           roomId: room.roomId,
           matchState: gameRoomManager.getMatch(room.roomId)?.getState(),
@@ -168,7 +168,7 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
         .populate('host', 'username avatar coins xp wins losses rank')
         .populate('guest', 'username avatar coins xp wins losses rank');
 
-      io.to(room.roomId).emit('room-updated', serializeRoomWithReadyState(populatedRoom));
+      io.to(room.roomId).compress(true).emit('room-updated', serializeRoomWithReadyState(populatedRoom));
     } catch (err: any) {
       socket.emit('room-error', { message: err.message || 'Failed to update ready state' });
     }
@@ -190,7 +190,7 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
         } else if (updatedRoom) {
           const readyState = getRoomReadyState(activeRoom.roomId);
           readyState.guestReady = false;
-          io.to(activeRoom.roomId).emit('room-updated', serializeRoomWithReadyState(updatedRoom));
+          io.to(activeRoom.roomId).compress(true).emit('room-updated', serializeRoomWithReadyState(updatedRoom));
         }
       }
     } catch (err) {

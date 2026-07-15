@@ -24,7 +24,16 @@ export const MainLayout: React.FC = () => {
 
       {/* Main Page Content */}
       <main className="flex-grow flex flex-col justify-center max-w-6xl mx-auto w-full py-8">
-        <Outlet />
+        <React.Suspense fallback={
+          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+            <div className="text-5xl mb-6 animate-bounce">🎱</div>
+            <p className="text-slate-400 font-display text-xs font-bold tracking-widest uppercase animate-pulse">
+              Loading screen assets...
+            </p>
+          </div>
+        }>
+          <Outlet />
+        </React.Suspense>
       </main>
 
       {/* Footer */}

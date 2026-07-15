@@ -1,15 +1,21 @@
 import React from 'react';
+import useSettingsStore from '../store/useSettingsStore';
 
 export const Lights: React.FC = () => {
+  const shadowQuality = useSettingsStore((state) => state.settings.shadowQuality);
+
+  const castShadows = shadowQuality !== 'low';
+  const shadowMapSize = shadowQuality === 'high' ? 2048 : 1024;
+
   return (
     <>
       <ambientLight intensity={0.6} />
       <directionalLight
-        castShadow
+        castShadow={castShadows}
         position={[4, 12, 4]}
         intensity={1.5}
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
         shadow-bias={-0.0005}
         shadow-camera-far={40}
         shadow-camera-left={-8}
