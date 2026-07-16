@@ -352,6 +352,14 @@ export const Dashboard: React.FC = () => {
               <span>▶️</span> {isActionLoading ? 'Matching...' : 'Play Quick Match'}
             </button>
 
+            {/* Play Tournament */}
+            <Link
+              to="/tournament"
+              className="py-4 px-6 bg-gradient-to-r from-pool-purple to-pool-purple/85 hover:shadow-lg hover:shadow-pool-purple/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+            >
+              <span>🏆</span> Play Tournament
+            </Link>
+
             {/* Create Room Options */}
             <div className="grid grid-cols-2 gap-2">
               <CreateRoomButton

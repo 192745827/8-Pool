@@ -4,6 +4,7 @@ import { gameRoomManager } from './GameRoomManager';
 import { reconnectionManager } from './ReconnectionManager';
 import { GAME_EVENTS } from './GameEvents';
 import { User } from '../../models/User';
+import { handleTournamentMatchCompletion } from '../tournament.socket';
 
 const getRankByXp = (xp: number): string => {
   const level = Math.floor(xp / 1000) + 1;
@@ -199,6 +200,13 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
           winner: result.state.winner,
           reason: result.state.foulReason,
         });
+
+        const winnerUserId = result.state.winner === 'host' ? match.getHostUserId() : match.getGuestUserId();
+
+        // If it's a tournament match room, handle bracket updates
+        if (data.roomId.toUpperCase().startsWith('TOURNAMENT_')) {
+          handleTournamentMatchCompletion(data.roomId, winnerUserId, io);
+        }
 
         // Trigger authoritative player rewards & achievements updates
         updatePlayerProgression(

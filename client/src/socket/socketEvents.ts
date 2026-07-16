@@ -36,6 +36,13 @@ export const SOCKET_EVENTS = {
   GAME_STATE_UPDATE: 'game-state-update',
   PLAYER_DISCONNECTED: 'player-disconnected',
   PLAYER_RECONNECTED: 'player-reconnected',
+
+  // Tournament Events
+  GET_TOURNAMENT_BRACKET: 'get-tournament-bracket',
+  JOIN_TOURNAMENT: 'join-tournament',
+  LEAVE_TOURNAMENT: 'leave-tournament',
+  TOURNAMENT_UPDATED: 'tournament-updated',
+  TOURNAMENT_ERROR: 'tournament-error',
 } as const;
 
 export type SocketEvent = typeof SOCKET_EVENTS[keyof typeof SOCKET_EVENTS];

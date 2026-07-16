@@ -10,6 +10,7 @@ const Game = React.lazy(() => import('../pages/Game'));
 const Leaderboard = React.lazy(() => import('../pages/Leaderboard'));
 const Profile = React.lazy(() => import('../pages/Profile'));
 const Settings = React.lazy(() => import('../pages/Settings'));
+const Tournament = React.lazy(() => import('../pages/Tournament'));
 const NotFound = React.lazy(() => import('../pages/NotFound'));
 
 const router = createBrowserRouter([
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
       {
         path: '/settings',
         element: <Settings />,
+      },
+      {
+        path: '/tournament',
+        element: <Tournament />,
       },
       {
         path: '*',
