@@ -360,6 +360,14 @@ export const Dashboard: React.FC = () => {
               <span>🏆</span> Play Tournament
             </Link>
 
+            {/* Single Player Practice */}
+            <Link
+              to="/game/practice"
+              className="py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-lg hover:shadow-emerald-500/15 text-slate-950 font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+            >
+              <span>🎱</span> Single Player Practice
+            </Link>
+
             {/* Create Room Options */}
             <div className="grid grid-cols-2 gap-2">
               <CreateRoomButton

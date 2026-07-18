@@ -17,6 +17,8 @@ export const Game: React.FC = () => {
   const user = useGameStore((state) => state.user);
   const navigate = useNavigate();
 
+  const isPractice = roomId === 'practice';
+
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,21 @@ export const Game: React.FC = () => {
 
   // Fetch initial room details and verify connection on mount
   useEffect(() => {
+    if (isPractice) {
+      setRoom({
+        roomId: 'practice',
+        isPrivate: true,
+        status: 'playing',
+        host: { _id: user?.id || 'practice-user', username: user?.username || 'Player' },
+        guest: null,
+        hostReady: true,
+        guestReady: false,
+      } as any);
+      setGameStarted(true);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchRoomDetails = async () => {
       if (!roomId) return;
       setIsLoading(true);
@@ -69,10 +86,11 @@ export const Game: React.FC = () => {
     if (token) {
       socketService.connect(token);
     }
-  }, [roomId, setRoom]);
+  }, [roomId, setRoom, isPractice, user]);
 
   // Setup Socket listeners for real-time room updates
   useEffect(() => {
+    if (isPractice) return;
     const socket = socketService.getSocket();
     if (!socket || !roomId) return;
 
@@ -165,7 +183,9 @@ export const Game: React.FC = () => {
 
   const handleLeaveRoom = () => {
     if (!roomId) return;
-    socketService.emit(SOCKET_EVENTS.LEAVE_ROOM, { roomId });
+    if (!isPractice) {
+      socketService.emit(SOCKET_EVENTS.LEAVE_ROOM, { roomId });
+    }
     setRoom(null);
     navigate('/dashboard');
   };
@@ -235,30 +255,34 @@ export const Game: React.FC = () => {
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-pool-cyan via-pool-purple to-pool-cyan shadow-[0_0_15px_#00f0ff]" />
 
           <h2 className="text-3xl font-extrabold font-display text-white tracking-widest uppercase animate-pulse">
-            🎱 MATCH IN PROGRESS
+            {isPractice ? '🎱 PRACTICE & TRAINING' : '🎱 MATCH IN PROGRESS'}
           </h2>
           <p className="text-xs text-pool-cyan font-body mt-2">
-            Dynamic waiting room countdown finished. Game successfully initialized!
+            {isPractice 
+              ? 'Practice your shots, test angles, and refine your controls.' 
+              : 'Dynamic waiting room countdown finished. Game successfully initialized!'}
           </p>
 
           {/* 3D Scene Viewport rendered from structured boilerplate */}
           <div className="my-8 max-w-3xl mx-auto">
             <ParticleProvider>
-              <Scene roomId={roomId} isHost={!!isHost} />
+              <Scene roomId={roomId} isHost={!!isHost} isPractice={isPractice} />
             </ParticleProvider>
           </div>
 
-          <div className="flex justify-center items-center gap-8 mb-8">
-            <div className="text-center">
-              <div className="text-sm font-bold text-white font-display truncate max-w-[120px]">{host?.username}</div>
-              <div className="text-[10px] font-bold text-pool-cyan uppercase tracking-wider mt-0.5">Host</div>
+          {!isPractice && (
+            <div className="flex justify-center items-center gap-8 mb-8">
+              <div className="text-center">
+                <div className="text-sm font-bold text-white font-display truncate max-w-[120px]">{host?.username}</div>
+                <div className="text-[10px] font-bold text-pool-cyan uppercase tracking-wider mt-0.5">Host</div>
+              </div>
+              <div className="text-slate-600 font-display text-2xl font-bold">VS</div>
+              <div className="text-center">
+                <div className="text-sm font-bold text-white font-display truncate max-w-[120px]">{guest?.username}</div>
+                <div className="text-[10px] font-bold text-pool-purple uppercase tracking-wider mt-0.5">Opponent</div>
+              </div>
             </div>
-            <div className="text-slate-600 font-display text-2xl font-bold">VS</div>
-            <div className="text-center">
-              <div className="text-sm font-bold text-white font-display truncate max-w-[120px]">{guest?.username}</div>
-              <div className="text-[10px] font-bold text-pool-purple uppercase tracking-wider mt-0.5">Opponent</div>
-            </div>
-          </div>
+          )}
 
           <button
             onClick={handleLeaveRoom}

@@ -78,7 +78,7 @@ export class RuleEngine {
       pocketedBalls
     );
 
-    nextState.activePlayer = nextPlayer;
+    nextState.activePlayer = currentState.isPractice ? 'host' : nextPlayer;
     nextState.isFirstShot = false;
     
     // Transition from break or normal play to playing state

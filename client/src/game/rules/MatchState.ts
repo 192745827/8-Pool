@@ -37,6 +37,7 @@ export interface MatchState {
   isCueBallScratched: boolean;
   foulOccurred: boolean;
   foulReason: string | null;
+  isPractice?: boolean;
 }
 
 export const INITIAL_MATCH_STATE: MatchState = {
@@ -53,4 +54,5 @@ export const INITIAL_MATCH_STATE: MatchState = {
   isCueBallScratched: false,
   foulOccurred: false,
   foulReason: null,
+  isPractice: false,
 };

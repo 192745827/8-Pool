@@ -101,7 +101,7 @@ const FpsLimiter: React.FC = () => {
   return null;
 };
 
-export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId, isHost }) => {
+export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: boolean }> = ({ roomId, isHost, isPractice }) => {
   const graphicsQuality = useSettingsStore((state) => state.settings.graphicsQuality);
   const [activeBalls, setActiveBalls] = useState<number[]>([
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
@@ -118,7 +118,8 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
 
   const gameManagerRef = useRef<GameManager>(new GameManager({
     ...INITIAL_MATCH_STATE,
-    status: 'break'
+    status: 'break',
+    isPractice: isPractice
   }));
   // eslint-disable-next-line react-hooks/refs
   const [matchState, setMatchState] = useState<MatchState>(gameManagerRef.current.getState());
@@ -173,6 +174,7 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
 
   // Synchronize and snap coordinate updates from authoritative server state
   useEffect(() => {
+    if (isPractice) return;
     const socket = socketService.getSocket();
     if (!socket || !roomId) return;
 
@@ -269,6 +271,15 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
 
   const handleConfirmPlacement = () => {
     gameManagerRef.current.resetBallInHand();
+  };
+
+  const handleToggleBallInHand = () => {
+    const gm = gameManagerRef.current;
+    const current = gm.getState().ballInHand;
+    gm.syncServerState({
+      ...gm.getState(),
+      ballInHand: !current
+    });
   };
 
   const isGameOver = matchState.status === 'game-over';
@@ -369,11 +380,13 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
 
         {/* Active Player Indicator */}
         <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-full shadow border transition-all duration-300 ${
-          matchState.activePlayer === 'host'
+          isPractice
+            ? 'bg-amber-500/15 text-amber-400 border-amber-500/35 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
+            : matchState.activePlayer === 'host'
             ? 'bg-pool-cyan/15 text-pool-cyan border-pool-cyan/30 shadow-[0_0_8px_rgba(0,240,255,0.1)]'
             : 'bg-pool-purple/15 text-pool-purple border-pool-purple/30 shadow-[0_0_8px_rgba(147,51,234,0.1)]'
         }`}>
-          👤 {matchState.activePlayer === 'host' ? 'HOST\'S TURN' : 'GUEST\'S TURN'}
+          👤 {isPractice ? 'PRACTICE MODE' : matchState.activePlayer === 'host' ? 'HOST\'S TURN' : 'GUEST\'S TURN'}
         </span>
 
         {/* Ball Group Assignments */}
@@ -460,6 +473,28 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
             className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-slate-950 font-display font-black text-xs uppercase tracking-widest rounded-xl shadow-lg transition transform active:scale-95 cursor-pointer shadow-emerald-500/25"
           >
             Confirm Placement ✓
+          </button>
+        </div>
+      )}
+
+      {/* Practice Actions Panel */}
+      {isPractice && (
+        <div className="absolute bottom-6 left-6 flex gap-2 z-20">
+          <button
+            onClick={handleRestart}
+            className="px-4 py-2.5 bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-pool-cyan/30 text-white hover:text-pool-cyan font-display font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-lg transition transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+          >
+            🔄 Reset Table
+          </button>
+          <button
+            onClick={handleToggleBallInHand}
+            className={`px-4 py-2.5 border font-display font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-lg transition transform active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+              matchState.ballInHand 
+                ? 'bg-amber-500 hover:bg-amber-600 border-amber-400 text-slate-950 shadow-amber-500/20' 
+                : 'bg-slate-900/80 hover:bg-slate-800 border-white/10 hover:border-amber-500/30 text-white hover:text-amber-500'
+            }`}
+          >
+            🎯 Ball in Hand
           </button>
         </div>
       )}
