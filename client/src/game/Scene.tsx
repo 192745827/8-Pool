@@ -70,6 +70,37 @@ const TurnController: React.FC<{
   return null;
 };
 
+// Constrains balls to the 2D table plane (XZ) by resetting Y coordinates and zeroing vertical velocities
+const PhysicsConstraintController: React.FC<{
+  cueBallRef: React.RefObject<RapierRigidBody | null>;
+  ballRefs: React.MutableRefObject<Map<number, RapierRigidBody>>;
+}> = ({ cueBallRef, ballRefs }) => {
+  useFrame(() => {
+    // Cue Ball Y constraint (only if not pocketed/scratched, i.e., Y > -2)
+    if (cueBallRef.current) {
+      const body = cueBallRef.current;
+      const pos = body.translation();
+      if (pos.y > -2 && Math.abs(pos.y - 0.28) > 0.005) {
+        body.setTranslation({ x: pos.x, y: 0.28, z: pos.z }, true);
+        const vel = body.linvel();
+        body.setLinvel({ x: vel.x, y: 0, z: vel.z }, true);
+      }
+    }
+
+    // Object Balls Y constraint
+    for (const body of ballRefs.current.values()) {
+      const pos = body.translation();
+      if (Math.abs(pos.y - 0.28) > 0.005) {
+        body.setTranslation({ x: pos.x, y: 0.28, z: pos.z }, true);
+        const vel = body.linvel();
+        body.setLinvel({ x: vel.x, y: 0, z: vel.z }, true);
+      }
+    }
+  });
+
+  return null;
+};
+
 // HUD Colors mapped for remaining balls indicator
 const HUD_BALL_COLORS: Record<number, string> = {
   1: '#eab308', 2: '#2563eb', 3: '#dc2626', 4: '#9333ea', 5: '#ea580c',
@@ -321,6 +352,10 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: b
             // eslint-disable-next-line react-hooks/refs
             gameManager={gameManagerRef.current}
             activeBalls={activeBalls}
+          />
+          <PhysicsConstraintController
+            cueBallRef={cueBallRef}
+            ballRefs={ballRefs}
           />
           <CueController
             cueBallRef={cueBallRef}
