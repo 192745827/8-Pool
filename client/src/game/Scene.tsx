@@ -311,18 +311,18 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean }> = ({ roomId,
             gameManager={gameManagerRef.current}
             activeBalls={activeBalls}
           />
+          <CueController
+            cueBallRef={cueBallRef}
+            turnState={turnState}
+            setTurnState={setTurnState}
+            power={power}
+            setPower={setPower}
+            // eslint-disable-next-line react-hooks/refs
+            gameManager={gameManagerRef.current}
+            roomId={roomId}
+            isHost={isHost}
+          />
         </PhysicsWorld>
-        <CueController
-          cueBallRef={cueBallRef}
-          turnState={turnState}
-          setTurnState={setTurnState}
-          power={power}
-          setPower={setPower}
-          // eslint-disable-next-line react-hooks/refs
-          gameManager={gameManagerRef.current}
-          roomId={roomId}
-          isHost={isHost}
-        />
 
         {/* 3D Visual Effects Highlights */}
         <Glow />

@@ -7,7 +7,7 @@ interface PhysicsWorldProps {
 
 export const PhysicsWorld: React.FC<PhysicsWorldProps> = ({ children }) => {
   return (
-    <Physics gravity={[0, -1.0, 0]}>
+    <Physics gravity={[0, -9.81, 0]}>
       {children}
     </Physics>
   );
