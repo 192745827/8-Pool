@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { audioManager } from '../audio';
+import { SupportedLanguage } from '../i18n/translations';
 
 export interface GameSettings {
   musicVolume: number;
@@ -8,7 +9,7 @@ export interface GameSettings {
   shadowQuality: 'low' | 'medium' | 'high';
   fpsLimit: '30' | '60' | 'unlimited';
   theme: 'dark' | 'light' | 'neon';
-  language: 'en' | 'es' | 'fr' | 'de';
+  language: SupportedLanguage;
 }
 
 interface SettingsState {
@@ -19,7 +20,7 @@ interface SettingsState {
   setShadowQuality: (quality: 'low' | 'medium' | 'high') => void;
   setFpsLimit: (limit: '30' | '60' | 'unlimited') => void;
   setTheme: (theme: 'dark' | 'light' | 'neon') => void;
-  setLanguage: (lang: 'en' | 'es' | 'fr' | 'de') => void;
+  setLanguage: (lang: SupportedLanguage) => void;
 }
 
 const LOCAL_STORAGE_KEY = 'eight_pool_game_settings_config';

@@ -74,47 +74,47 @@ export const translations = {
     light: "Champ Lumineux",
     neon: "Néon Cyber",
     english: "English",
+    hindi: "हिंदी",
     spanish: "Español",
     french: "Français",
-    german: "Deutsch",
 
     backToDashboard: "Retour au Tableau",
     resetDefaults: "Réinitialiser",
     settingsSaved: "Paramètres enregistrés avec succès!"
   },
-  de: {
-    settingsTitle: "SPIELEINSTELLUNGEN",
-    settingsSubtitle: "Passen Sie Ihr Billarderlebnis, Audio-Parameter, Grafik und Designs an.",
-    musicVolume: "Musiklautstärke",
-    sfxVolume: "Effektlautstärke (SFX)",
-    graphicsQuality: "Grafikqualität",
-    shadowQuality: "Schattenqualität",
-    fpsLimit: "FPS-Begrenzung",
-    theme: "UI-Design",
-    language: "Sprache",
+  hi: {
+    settingsTitle: "गेम सेटिंग्स",
+    settingsSubtitle: "अपने पूल अनुभव, ऑडियो पैरामीटर, ग्राफिक्स और थीम विकल्पों को अनुकूलित करें।",
+    musicVolume: "संगीत वॉल्यूम",
+    sfxVolume: "ध्वनि प्रभाव (SFX) वॉल्यूम",
+    graphicsQuality: "ग्राफिक्स गुणवत्ता",
+    shadowQuality: "शैडो गुणवत्ता",
+    fpsLimit: "FPS सीमा",
+    theme: "UI थीम",
+    language: "भाषा",
     
-    low: "Niedrig",
-    medium: "Mittel",
-    high: "Hoch",
-    unlimited: "Unbegrenzt",
-    dark: "Dunkle Leere",
-    light: "Helles Feld",
-    neon: "Neon Cyber",
+    low: "कम",
+    medium: "मध्यम",
+    high: "उच्च",
+    unlimited: "असीमित",
+    dark: "डार्क वॉइड",
+    light: "ब्राइट फील्ड",
+    neon: "नियोन साइबर",
     english: "English",
+    hindi: "हिंदी",
     spanish: "Español",
     french: "Français",
-    german: "Deutsch",
 
-    backToDashboard: "Zurück zum Dashboard",
-    resetDefaults: "Standard wiederherstellen",
-    settingsSaved: "Einstellungen erfolgreich gespeichert!"
+    backToDashboard: "डैशबोर्ड पर वापस जाएं",
+    resetDefaults: "रीसेट करें",
+    settingsSaved: "सेटिंग्स सफलतापूर्वक सहेजी गईं!"
   }
 };
 
 export const useTranslation = () => {
   const language = useSettingsStore((state) => state.settings.language);
   const t = (key: keyof typeof translations.en) => {
-    const langDict = translations[language] || translations.en;
+    const langDict = (translations as Record<string, any>)[language] || translations.en;
     return langDict[key] || translations.en[key] || key;
   };
   return { t, language };

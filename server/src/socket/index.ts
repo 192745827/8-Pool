@@ -6,6 +6,7 @@ import { registerChatHandlers } from './chat.socket';
 import { registerGameHandlers } from './game.socket';
 import { registerTournamentHandlers } from './tournament.socket';
 import { registerFriendHandlers } from './friend.socket';
+import { registerMatchmakingHandlers } from './matchmaking.socket';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development-only';
 
@@ -44,6 +45,7 @@ export const initSocketServer = (io: Server): void => {
     registerGameHandlers(io, socket);
     registerTournamentHandlers(io, socket);
     registerFriendHandlers(io, socket);
+    registerMatchmakingHandlers(io, socket);
 
     socket.on('disconnect', () => {
       console.log(`🔌 Player disconnected: ${socket.id} (User: ${socket.user?.username})`);

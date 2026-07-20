@@ -13,6 +13,10 @@ const Settings = React.lazy(() => import('../pages/Settings'));
 const Tournament = React.lazy(() => import('../pages/Tournament'));
 const Friends = React.lazy(() => import('../pages/Friends'));
 const Replays = React.lazy(() => import('../pages/Replays'));
+const Practice = React.lazy(() => import('../pages/Practice'));
+const AiMatch = React.lazy(() => import('../pages/AiMatch'));
+const Rankings = React.lazy(() => import('../pages/Rankings'));
+const Shop = React.lazy(() => import('../pages/Shop'));
 const NotFound = React.lazy(() => import('../pages/NotFound'));
 
 const router = createBrowserRouter([
@@ -66,6 +70,22 @@ const router = createBrowserRouter([
       {
         path: '/replays',
         element: <Replays />,
+      },
+      {
+        path: '/practice',
+        element: <Practice />,
+      },
+      {
+        path: '/ai-match',
+        element: <AiMatch />,
+      },
+      {
+        path: '/rankings',
+        element: <Rankings />,
+      },
+      {
+        path: '/shop',
+        element: <Shop />,
       },
       {
         path: '*',

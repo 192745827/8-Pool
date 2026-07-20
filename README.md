@@ -257,15 +257,192 @@ Offline single-player training mode for learning and shot practice.
 
 ---
 
+### 🤖 AI Opponent
+Single-player vs AI Bot match with configurable difficulty.
+
+**Difficulties:**
+* `Easy`: High angular error, casual shot power
+* `Medium`: Direct target ball & pocket physics heuristic
+* `Hard`: High precision collision vector targeting & optimal speed
+
+**AI Features:**
+* Uses physics collision heuristics to identify valid target balls and line-of-sight pockets
+* Automatic turn execution with smooth aiming animation
+
+---
+
+### 🌏 Matchmaking & ELO Rating System
+Rank-based automated quick matchmaking and skill rating engine.
+
+**Matchmaking Flow:**
+`Quick Match` -> `Find Player` -> `Match Same Rank/ELO` -> `Auto-Join Game Room`
+
+**ELO Rating Rules:**
+* Default rating: 1200 ELO
+* Standard Esports K-Factor formula ($K = 32$)
+* Rank Tiers: Bronze (<1100), Silver (1100-1300), Gold (1300-1500), Platinum (1500-1700), Diamond (1700-1900), Master (1900+)
+
+---
+
+### 🏅 Competitive Ranking System
+Dynamic post-match rank tier progression engine.
+
+**Rank Tiers:**
+* 🥉 `Bronze`: < 1100 ELO
+* 🥈 `Silver`: 1100 - 1299 ELO
+* 🥇 `Gold`: 1300 - 1499 ELO
+* 💠 `Platinum`: 1500 - 1699 ELO
+* 💎 `Diamond`: 1700 - 1899 ELO
+* 👑 `Master`: 1900+ ELO
+
+**Ranking Features:**
+* Automatic post-match rank evaluation & database update after every game
+* Real-time rank promotion / demotion notifications & tier progress bar
+
+---
+
+### 💰 Shop & Inventory System
+In-game store and item management engine.
+
+**Categories:**
+* `Cue Sticks`: Standard, Neon Cyber, Dragon Blaze, Royal Gold, Void Phantom
+* `Table Felts`: Classic Green, Cyber Neon Blue, Royal Purple Velvet, Crimson Passion Red
+* `Avatars`: Maverick, Cyberpunk, Pool Shark, Royal Crown, Golden Lion
+* `Emotes`: 😎 Cool, 🚀 Rocket, 💥 Boom, 👑 Crown, 🔥 Fire
+* `Victory Effects`: Confetti Fireworks, Neon Laser Pulse, Victory Flame Streamer
+
+**Inventory Features:**
+* Coin-based item purchasing & coin balance deduction
+* Owned items collection database storage
+* Real-time item equipping and active customization
+
+---
+
+### 🎁 Daily Rewards System
+7-day login streak reward calendar.
+
+**Reward Progression:**
+* `Day 1`: 100 Coins
+* `Day 2`: 150 Coins
+* `Day 3`: 200 Coins
+* `Day 4`: 300 Coins + 100 XP
+* `Day 5`: 500 Coins
+* `Day 6`: 750 Coins + 250 XP
+* `Day 7`: 1,500 Coins + 👑 **Legendary Cue**
+
+**Daily Features:**
+* Automated daily login streak tracking & reset after missing a day
+* Popup calendar modal on dashboard login with one-click claim
+
+---
+
+### 📱 Responsive Mobile Support
+Comprehensive mobile touch controls and adaptive HUD layout engine.
+
+**Mobile Enhancements:**
+* `Touch Aiming`: Intuitive single-finger 3D table drag gesture aiming with dampening
+* `Responsive HUD`: Adaptive compact top bar for player avatars, turn status, and timers
+* `Landscape Mode`: Device orientation detector with landscape recommendation overlay
+* `Mobile Controls`: Fine-tune angle micro-adjustment buttons, touch power slider, and quick presets
+
+---
+
+### 🌎 Internationalization (i18n)
+Multi-language support for international players.
+
+**Supported Languages:**
+* 🇺🇸 `English`: Full UI localization & default language
+* 🇮🇳 `Hindi (हिंदी)`: Devanagari translation for game controls, shop, and dashboard
+* 🇪🇸 `Spanish (Español)`: Spanish localization for competitive modes and menus
+* 🇫🇷 `French (Français)`: French localization for settings and HUD badges
+
+---
+
+### 🔒 Backend Security Improvements
+Production-grade enterprise security architecture.
+
+**Security Features:**
+* `Helmet`: Comprehensive HTTP security headers (CSP, HSTS, X-Frame-Options, XSS protection)
+* `Rate Limiting`: DDoS protection and strict IP rate limiters on auth & API endpoints
+* `Input Validation`: Strict schema validation for emails, passwords, and room payloads
+* `Sanitization`: Automatic XSS escaping and Mongo operator injection prevention
+* `HTTPS`: Secure cookies, HSTS headers, and HTTPS enforcement
+* `Refresh Tokens`: Dual JWT token architecture (Short-lived 15m Access Token + 7d Refresh Token)
+
+---
+
+### 🐳 Docker & Containerization
+Single-command production deployment infrastructure.
+
+**Containerized Stack:**
+* `Frontend`: React Vite container with Nginx web server
+* `Backend`: Express.js Node.js server container
+* `MongoDB`: Official MongoDB 7.0 database container with volume persistence
+* `Redis`: Official Redis 7 Alpine cache container for socket session caching
+
+**Deployment Command:**
+```bash
+docker compose up
+```
+
+---
+
+### ⚙️ CI/CD Pipeline (GitHub Actions)
+Automated continuous integration & continuous deployment pipeline.
+
+**Pipeline Flow:**
+`Push / PR` -> `Install Dependencies` -> `Test Verification` -> `Build Production Bundles` -> `Deploy Container Artifacts`
+
+**Automated Jobs:**
+* Setup Node.js 20 & npm cache
+* Type-check verification for server & client TypeScript code
+* Production build execution (`npm run build`)
+* Docker image build validation for frontend & backend
+
+---
+
+### 📊 Monitoring & Observability
+System telemetry, error logging, and performance metrics.
+
+**Monitoring Capabilities:**
+* `Sentry`: Production error tracking & exception capture integration wrapper
+* `Logging`: Structured logger with timestamps, log levels, request context, and error stacks
+* `Health Checks`: Detailed `/health` and `/health/liveness` REST endpoints reporting MongoDB status, uptime, and memory usage
+* `Performance Metrics`: Execution response time measurement (`X-Response-Time` header) and memory usage profiling
+
+---
+
+### 📂 Feature-Sliced Architecture (`features/`)
+Domain-driven feature module organization.
+
+**Feature Subdirectories (`features/`):**
+* 🏆 `tournaments/`: Tournament bracket manager, elimination trees, and knockout mode state
+* 📺 `replay/`: Shot snapshot recorder, replay player controls, and 3D match playback
+* 🤖 `ai/`: Physics collision solver, bot difficulty levels, and single-player AI agent
+* 🛍️ `shop/`: Cosmetic catalog, coin store, and inventory equipment manager
+* 📈 `analytics/`: Player telemetry tracker, match accuracy metrics, and win-rate statistics
+* ⚡ `matchmaking/`: Rank-proximity matchmaking queue, ELO solver, and radar modal
+
+---
+
 ## 🔮 Future Improvements Roadmap
 
 * [x] **Friend System**: Full implementation of Friend model, friend requests, online status tracking, and direct match invites.
 * [x] **Global Chat System**: Comprehensive multi-channel chat engine featuring Lobby Chat, Game Chat, Direct Private Messaging, Typing Indicators, and Online User lists.
 * [x] **Spectator Mode**: Support for third-party room spectators with real-time frame sync and shoot permissions disabled.
 * [x] **Match Replay System**: Full shot-by-shot match recording and interactive 3D playback viewer.
-* [ ] **Practice Mode**: Comprehensive offline practice arena with rack reset, ball placement, and shot training HUD.
+* [x] **Practice Mode**: Comprehensive offline practice arena with rack reset, ball placement, and shot training HUD.
+* [x] **AI Opponent**: Single-player matches vs AI Bot with Easy, Medium, and Hard difficulty levels.
+* [x] **Matchmaking & ELO Rating System**: Automated rank-proximity matchmaking queue with real-time ELO rating updates.
+* [x] **Competitive Ranking System**: Dynamic post-match rank tier progression ladder with promotion modals & tier progress.
+* [x] **Shop & Inventory System**: Coin-based store catalog for Cues, Tables, Avatars, Emotes, and Victory Effects with inventory equipping.
+* [x] **Daily Rewards System**: 7-day consecutive login reward calendar awarding coins, XP, and legendary cues.
+* [x] **Responsive Mobile Support**: Touch aiming gestures, responsive game HUD, portrait/landscape orientation prompts, and fine mobile power controls.
+* [x] **Internationalization**: 4-language i18n engine (English, Hindi, Spanish, French) with quick language selector.
+* [x] **Backend Security Improvements**: Helmet HTTP headers, IP rate limiters, input sanitization, HTTPS security, and JWT refresh tokens.
+* [x] **Docker Containerization**: Multi-container Docker Compose setup for Frontend, Backend, MongoDB, and Redis with single command `docker compose up`.
+* [x] **CI/CD Pipeline**: GitHub Actions workflow for push triggers, dependency install, test verification, production builds, and container deployment.
+* [x] **Monitoring & Observability**: Sentry error tracking wrapper, structured logger, health checks with DB status, and performance metrics.
+* [ ] **Feature-Sliced Architecture**: Domain-driven feature directory (`features/` containing tournaments, replay, ai, shop, analytics, matchmaking).
 * [ ] **Authoritative WebAssembly Physics**: Fully bundle Rapier3D WASM into Node.js server loop for complete physics authoritative simulation frame-by-frame.
 * [ ] **Match Chat System Extensions**: Integrate quick-emoji updates and customized pre-written short chat scripts.
-* [ ] **Cue Stick Shop & Skins**: Support coin-based purchases for custom aiming guidelines and visual stick cues.
-* [ ] **Daily Challenges**: Introduce randomized target pocket shots and reward multipliers.
-

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSettingsStore from '../store/useSettingsStore';
 import useTranslation from '../hooks/useTranslation';
+import LanguageSelector from '../components/LanguageSelector';
 
 export const Settings: React.FC = () => {
   const { settings, setMusicVolume, setSfxVolume, setGraphicsQuality, setShadowQuality, setFpsLimit, setTheme, setLanguage } = useSettingsStore();
@@ -58,26 +59,12 @@ export const Settings: React.FC = () => {
         <div className="space-y-6 text-left border-y border-white/5 py-6">
           
           {/* 1. Language selector */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <label className="text-sm font-bold text-white font-display block">
-                🌐 {t('language')}
-              </label>
-              <span className="text-[10px] text-slate-400 font-body">Select your default localization language.</span>
-            </div>
-            <select
-              value={settings.language}
-              onChange={(e) => {
-                setLanguage(e.target.value as any);
-                triggerToast();
-              }}
-              className="px-4 py-2.5 bg-slate-950 border border-white/10 rounded-xl text-slate-200 font-display text-xs focus:border-pool-cyan focus:outline-none w-full sm:w-44 transition cursor-pointer"
-            >
-              <option value="en">{t('english')}</option>
-              <option value="es">{t('spanish')}</option>
-              <option value="fr">{t('french')}</option>
-              <option value="de">{t('german')}</option>
-            </select>
+          <div>
+            <label className="text-sm font-bold text-white font-display block mb-1">
+              🌐 {t('language')} / Internationalization
+            </label>
+            <p className="text-[10px] text-slate-400 font-body mb-3">Select your preferred localization language (English, Hindi, Spanish, French).</p>
+            <LanguageSelector />
           </div>
 
           {/* 2. Theme selector */}

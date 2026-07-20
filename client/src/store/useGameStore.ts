@@ -11,6 +11,7 @@ export interface UserProfile {
   wins: number;
   losses: number;
   rank: string;
+  eloRating?: number;
   achievements?: string[];
 }
 

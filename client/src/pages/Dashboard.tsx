@@ -6,6 +6,8 @@ import gsap from 'gsap';
 import StatsCard from '../components/StatsCard';
 import JoinRoomModal from '../components/JoinRoomModal';
 import CreateRoomButton from '../components/CreateRoomButton';
+import MatchmakingModal from '../components/MatchmakingModal';
+import DailyRewardsModal from '../components/DailyRewardsModal';
 import socketService from '../socket/socket';
 import { SOCKET_EVENTS } from '../socket/socketEvents';
 
@@ -19,6 +21,7 @@ interface UserProfile {
   wins: number;
   losses: number;
   rank: string;
+  eloRating?: number;
   achievements?: string[];
 }
 
@@ -33,6 +36,8 @@ export const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isJoinOpen, setIsJoinOpen] = useState(false);
+  const [isMatchmakingOpen, setIsMatchmakingOpen] = useState(false);
+  const [isDailyOpen, setIsDailyOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,8 +76,15 @@ export const Dashboard: React.FC = () => {
           wins: res.data.wins,
           losses: res.data.losses,
           rank: res.data.rank,
+          eloRating: res.data.eloRating,
           achievements: res.data.achievements,
         });
+
+        // Check daily reward claim availability
+        const dailyRes = await api.get('/api/daily-rewards/status');
+        if (dailyRes.data.canClaimToday) {
+          setIsDailyOpen(true);
+        }
       } catch (err) {
         console.error('Auth error on dashboard:', err);
         localStorage.removeItem('token');
@@ -129,35 +141,7 @@ export const Dashboard: React.FC = () => {
   }, [navigate, setRoom, profile]);
 
   const handleQuickPlay = async () => {
-    setIsActionLoading(true);
-    setActionError(null);
-    try {
-      const socket = socketService.getSocket();
-      if (!socket) {
-        const token = localStorage.getItem('token');
-        if (token) {
-          socketService.connect(token);
-        } else {
-          throw new Error('Not authenticated');
-        }
-      }
-
-      // Find public lobbies via API
-      const roomsRes = await api.get('/api/rooms');
-      const publicRooms = roomsRes.data;
-
-      if (publicRooms.length > 0) {
-        // Join public lobby via socket
-        const targetRoom = publicRooms[0];
-        handleJoinSubmit(targetRoom.roomId);
-      } else {
-        // Create new public lobby via socket
-        socketService.emit(SOCKET_EVENTS.CREATE_ROOM, { isPrivate: false });
-      }
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to matchmake.');
-      setIsActionLoading(false);
-    }
+    setIsMatchmakingOpen(true);
   };
 
   const handleCreateRoom = (isPrivate: boolean) => {
@@ -301,6 +285,13 @@ export const Dashboard: React.FC = () => {
               colorClass="text-amber-400"
             />
             <StatsCard
+              label="ELO Rating"
+              value={`${profile?.eloRating || 1200} ELO`}
+              icon="⚡"
+              description="Rank-based matchmaking skill rating and tier standing."
+              colorClass="text-purple-400"
+            />
+            <StatsCard
               label="Experience Points"
               value={`${profile?.xp} XP`}
               icon="✨"
@@ -385,11 +376,43 @@ export const Dashboard: React.FC = () => {
 
             {/* Single Player Practice */}
             <Link
-              to="/game/practice"
+              to="/practice"
               className="py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-lg hover:shadow-emerald-500/15 text-slate-950 font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
             >
-              <span>🎱</span> Single Player Practice
+              <span>🎮</span> Practice Mode
             </Link>
+
+            {/* Play Vs AI Bot */}
+            <Link
+              to="/ai-match"
+              className="py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:shadow-purple-600/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+            >
+              <span>🤖</span> Play Vs AI Bot
+            </Link>
+
+            {/* Ranking System */}
+            <Link
+              to="/rankings"
+              className="py-4 px-6 bg-gradient-to-r from-amber-500 to-yellow-600 hover:shadow-lg hover:shadow-amber-500/15 text-black font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+            >
+              <span>🏅</span> Ranking System
+            </Link>
+
+            {/* Shop & Inventory Store */}
+            <Link
+              to="/shop"
+              className="py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:shadow-cyan-500/15 text-white font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+            >
+              <span>💰</span> Shop & Inventory Store
+            </Link>
+
+            {/* Daily Rewards Calendar */}
+            <button
+              onClick={() => setIsDailyOpen(true)}
+              className="py-4 px-6 bg-gradient-to-r from-amber-400 to-yellow-500 hover:shadow-lg hover:shadow-amber-400/15 text-black font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+            >
+              <span>🎁</span> Daily Rewards Calendar
+            </button>
 
             {/* Create Room Options */}
             <div className="grid grid-cols-2 gap-2">
@@ -448,6 +471,18 @@ export const Dashboard: React.FC = () => {
         onClose={() => setIsJoinOpen(false)}
         onJoin={handleJoinSubmit}
         isJoining={isActionLoading}
+      />
+
+      {/* Automated Matchmaking Modal */}
+      <MatchmakingModal
+        isOpen={isMatchmakingOpen}
+        onClose={() => setIsMatchmakingOpen(false)}
+      />
+
+      {/* Daily Rewards Calendar Modal */}
+      <DailyRewardsModal
+        isOpen={isDailyOpen}
+        onClose={() => setIsDailyOpen(false)}
       />
     </div>
   );

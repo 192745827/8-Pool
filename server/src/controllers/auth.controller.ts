@@ -158,3 +158,22 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
     res.status(500).json({ error: error.message || 'Internal server error during profile fetching' });
   }
 };
+
+/**
+ * Controller to handle token refresh.
+ * Route: POST /api/users/refresh-token
+ */
+export const handleRefreshToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      res.status(400).json({ error: 'Refresh token is required' });
+      return;
+    }
+
+    const tokens = await authService.refreshUserToken(refreshToken);
+    res.status(200).json(tokens);
+  } catch (error: any) {
+    res.status(401).json({ error: error.message || 'Invalid refresh token' });
+  }
+};

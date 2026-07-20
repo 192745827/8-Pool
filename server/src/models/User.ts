@@ -11,11 +11,21 @@ export interface IUser extends Document {
   wins: number;
   losses: number;
   rank: string;
+  eloRating: number;
   achievements: string[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword: (password: string) => Promise<boolean>;
 }
+
+export const getRankTierFromElo = (elo: number = 1200): string => {
+  if (elo < 1100) return 'Bronze';
+  if (elo < 1300) return 'Silver';
+  if (elo < 1500) return 'Gold';
+  if (elo < 1700) return 'Platinum';
+  if (elo < 1900) return 'Diamond';
+  return 'Master';
+};
 
 const UserSchema: Schema = new Schema(
   {
@@ -82,7 +92,12 @@ const UserSchema: Schema = new Schema(
     },
     rank: {
       type: String,
-      default: 'Beginner',
+      default: 'Silver',
+    },
+    eloRating: {
+      type: Number,
+      default: 1200,
+      min: [0, 'ELO rating cannot be negative'],
     },
     achievements: {
       type: [String],

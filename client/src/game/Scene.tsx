@@ -15,6 +15,8 @@ import socketService from '../socket/socket';
 import { audioManager } from '../audio';
 import { useParticles, Glow, Trail, Confetti, PocketEffect } from '../effects';
 import GameLoader from '../components/GameLoader';
+import LandscapePrompt from '../components/LandscapePrompt';
+import MobileControlsOverlay from '../components/MobileControlsOverlay';
 import useSettingsStore from '../store/useSettingsStore';
 
 // Sub-component to monitor ball movement and reset turns on each physics frame
@@ -655,6 +657,25 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: b
             </button>
           </div>
         </div>
+      )}
+
+      {/* Landscape Orientation Recommendation Banner */}
+      <LandscapePrompt />
+
+      {/* Mobile Controls Overlay */}
+      {!isSpectator && matchState.status !== 'game-over' && (
+        <MobileControlsOverlay
+          aimAngle={0}
+          onAngleChange={() => {}}
+          power={power}
+          onPowerChange={(newPower) => setPower(newPower)}
+          onShoot={() => {
+            if (power > 0 && turnState !== 'balls-moving') {
+              setTurnState('shooting');
+            }
+          }}
+          disabled={turnState === 'balls-moving' || (!isPractice && (isHost ? matchState.activePlayer !== 'host' : matchState.activePlayer !== 'guest'))}
+        />
       )}
     </div>
   );

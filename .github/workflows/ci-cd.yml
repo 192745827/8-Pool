@@ -1,0 +1,111 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # ─── STAGE 1 & 2: INSTALL & TEST VERIFICATION ───
+  install-and-test:
+    name: 📦 Install & 🧪 Test Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Server Dependencies
+        run: |
+          cd server
+          npm install
+
+      - name: 📦 Install Client Dependencies
+        run: |
+          cd client
+          npm install
+
+      - name: 🧪 Verify Server TypeScript Code
+        run: |
+          cd server
+          npx tsc --noEmit
+
+      - name: 🧪 Verify Client TypeScript Code
+        run: |
+          cd client
+          npx tsc --noEmit
+
+  # ─── STAGE 3: PRODUCTION BUILD ───
+  build:
+    name: 🏗️ Production Build
+    needs: install-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Server Dependencies
+        run: |
+          cd server
+          npm install
+
+      - name: 📦 Install Client Dependencies
+        run: |
+          cd client
+          npm install
+
+      - name: 🏗️ Build Server Dist Artifacts
+        run: |
+          cd server
+          npm run build
+
+      - name: 🏗️ Build Client Static Assets
+        run: |
+          cd client
+          npm run build
+
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-artifacts
+          path: |
+            server/dist
+            client/dist
+
+  # ─── STAGE 4: DOCKER CONTAINER BUILD & DEPLOY VERIFICATION ───
+  deploy:
+    name: 🚀 Docker Build & Deploy Verification
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🛠️ Validate Docker Compose Configuration
+        run: docker compose config
+
+      - name: 🐳 Build Server Docker Image
+        run: |
+          docker build -t 8-pool-backend:latest ./server
+
+      - name: 🐳 Build Client Docker Image
+        run: |
+          docker build -t 8-pool-frontend:latest ./client

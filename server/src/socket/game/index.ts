@@ -3,7 +3,7 @@ import { AuthenticatedSocket } from '../socket.types';
 import { gameRoomManager } from './GameRoomManager';
 import { reconnectionManager } from './ReconnectionManager';
 import { GAME_EVENTS } from './GameEvents';
-import { User } from '../../models/User';
+import { User, getRankTierFromElo } from '../../models/User';
 import { MatchReplay } from '../../models/MatchReplay';
 import { handleTournamentMatchCompletion } from '../tournament.socket';
 import { recordMatchOpponents } from '../friend.socket';
@@ -133,6 +133,22 @@ const updatePlayerProgression = async (
       if (guestUser.wins + guestUser.losses === 100) {
         if (checkUnlock(guestUser, '100 Matches')) guestUnlocked.push('100 Matches');
       }
+
+      // Calculate ELO Rating updates (K = 32 formula)
+      const hostElo = hostUser.eloRating || 1200;
+      const guestElo = guestUser.eloRating || 1200;
+
+      const expectedHost = 1 / (1 + Math.pow(10, (guestElo - hostElo) / 400));
+      const expectedGuest = 1 / (1 + Math.pow(10, (hostElo - guestElo) / 400));
+
+      const scoreHost = winnerRole === 'host' ? 1 : 0;
+      const scoreGuest = winnerRole === 'guest' ? 1 : 0;
+
+      hostUser.eloRating = Math.max(100, Math.round(hostElo + 32 * (scoreHost - expectedHost)));
+      guestUser.eloRating = Math.max(100, Math.round(guestElo + 32 * (scoreGuest - expectedGuest)));
+
+      hostUser.rank = getRankTierFromElo(hostUser.eloRating);
+      guestUser.rank = getRankTierFromElo(guestUser.eloRating);
 
       await hostUser.save();
       await guestUser.save();

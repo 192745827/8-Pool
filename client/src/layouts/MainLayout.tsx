@@ -1,24 +1,28 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import GlobalChat from '../components/GlobalChat';
+import LanguageSelector from '../components/LanguageSelector';
 
 export const MainLayout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-pool-dark text-slate-100 font-body">
       {/* Sticky Glassmorphic Header */}
-      <header className="sticky top-0 z-50 py-4 px-6 bg-pool-dark/85 backdrop-blur-md border-b border-white/5">
+      <header className="sticky top-0 z-50 py-3.5 px-6 bg-pool-dark/85 backdrop-blur-md border-b border-white/5">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎱</span>
             <span className="font-display font-extrabold text-lg tracking-wider text-white">
-              8-POOL MULTIPLAYER
+              8-POOL ULTRA
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-xs text-slate-400 font-semibold tracking-wide uppercase">
-              Restructured Client Setup
-            </span>
+          <div className="flex items-center gap-3">
+            <LanguageSelector compact={true} />
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-xs text-slate-400 font-semibold tracking-wide uppercase">
+                Online
+              </span>
+            </div>
           </div>
         </div>
       </header>
