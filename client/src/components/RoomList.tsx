@@ -5,6 +5,7 @@ import RoomCard from './RoomCard';
 interface RoomListProps {
   rooms: GameRoom[];
   onJoin: (roomId: string) => void;
+  onSpectate?: (roomId: string) => void;
   joiningRoomId?: string | null;
   onRefresh?: () => void;
 }
@@ -12,6 +13,7 @@ interface RoomListProps {
 export const RoomList: React.FC<RoomListProps> = ({
   rooms,
   onJoin,
+  onSpectate,
   joiningRoomId = null,
   onRefresh,
 }) => {
@@ -42,6 +44,7 @@ export const RoomList: React.FC<RoomListProps> = ({
           key={room.roomId}
           room={room}
           onJoin={onJoin}
+          onSpectate={onSpectate}
           isJoining={joiningRoomId === room.roomId}
         />
       ))}

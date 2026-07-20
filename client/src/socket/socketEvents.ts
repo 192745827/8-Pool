@@ -43,6 +43,19 @@ export const SOCKET_EVENTS = {
   LEAVE_TOURNAMENT: 'leave-tournament',
   TOURNAMENT_UPDATED: 'tournament-updated',
   TOURNAMENT_ERROR: 'tournament-error',
+
+  // Friend Events
+  FRIEND_STATUS_CHANGE: 'friend-status-change',
+  SEND_FRIEND_INVITE: 'send-friend-invite',
+  FRIEND_INVITE_RECEIVED: 'friend-invite-received',
+
+  // Global Chat Events
+  JOIN_GLOBAL_CHAT: 'join-global-chat',
+  LEAVE_GLOBAL_CHAT: 'leave-global-chat',
+  PRIVATE_MESSAGE: 'private-message',
+  RECEIVE_PRIVATE_MESSAGE: 'receive-private-message',
+  TYPING: 'typing',
+  ONLINE_USERS: 'online-users',
 } as const;
 
 export type SocketEvent = typeof SOCKET_EVENTS[keyof typeof SOCKET_EVENTS];

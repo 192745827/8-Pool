@@ -2,10 +2,27 @@ import { AuthoritativeGameState, createInitialGameState, MatchStats } from './Ga
 import PhysicsSync from './PhysicsSync';
 import RuleSync from './RuleSync';
 
+export interface ShotLogEntry {
+  shotNumber: number;
+  shooterId: string;
+  shooterRole: 'host' | 'guest';
+  angle: number;
+  power: number;
+  timestamp: Date;
+  ballsSnapshot: Array<{
+    id: number;
+    x: number;
+    y: number;
+    z: number;
+    isActive: boolean;
+  }>;
+}
+
 export class MatchManager {
   private state: AuthoritativeGameState;
   private hostUserId: string;
   private guestUserId: string;
+  private shotLogs: ShotLogEntry[] = [];
 
   // Track match statistics
   private startTime: number = Date.now();
@@ -30,6 +47,10 @@ export class MatchManager {
 
   public getGuestUserId(): string {
     return this.guestUserId;
+  }
+
+  public getShotLogs(): ShotLogEntry[] {
+    return this.shotLogs;
   }
 
   public getAchievementDetails() {
@@ -89,8 +110,24 @@ export class MatchManager {
     // Track break shot status before processing
     const isBreakShot = this.state.isFirstShot;
 
-    // Save previous ball positions to measure pot distances
+    // Save previous ball positions to measure pot distances and record replay snapshot
     const preShotBalls = JSON.parse(JSON.stringify(this.state.balls));
+
+    this.shotLogs.push({
+      shotNumber: this.shotLogs.length + 1,
+      shooterId: userId,
+      shooterRole: activePlayerRole,
+      angle,
+      power,
+      timestamp: new Date(),
+      ballsSnapshot: preShotBalls.map((b: any) => ({
+        id: b.id,
+        x: b.x,
+        y: b.y,
+        z: b.z,
+        isActive: b.isActive,
+      })),
+    });
 
     // 2. Server-side physics simulation step
     const simulation = PhysicsSync.simulateShot(this.state, angle, power);

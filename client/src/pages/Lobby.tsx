@@ -107,6 +107,20 @@ export const Lobby: React.FC = () => {
     socketService.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId: roomId.trim().toUpperCase() });
   }, [navigate, setRoom]);
 
+  const handleSpectate = useCallback((roomId: string) => {
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    const handleUpdated = (room: any) => {
+      setRoom(room);
+      navigate(`/game/${room.roomId}`);
+      socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleUpdated);
+    };
+
+    socket.on(SOCKET_EVENTS.ROOM_UPDATED, handleUpdated);
+    socketService.emit(SOCKET_EVENTS.JOIN_ROOM, { roomId: roomId.trim().toUpperCase(), asSpectator: true });
+  }, [navigate, setRoom]);
+
   return (
     <div className="max-w-4xl mx-auto w-full px-4 py-8">
       {error && (
@@ -199,6 +213,7 @@ export const Lobby: React.FC = () => {
             <RoomList
               rooms={rooms}
               onJoin={handleJoinRoom}
+              onSpectate={handleSpectate}
               joiningRoomId={joiningRoomId}
               onRefresh={fetchPublicRooms}
             />

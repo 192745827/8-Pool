@@ -4,6 +4,7 @@ export interface IRoom extends Document {
   roomId: string;
   host: mongoose.Types.ObjectId;
   guest?: mongoose.Types.ObjectId | null;
+  spectators: mongoose.Types.ObjectId[];
   status: 'lobby' | 'playing' | 'ended';
   isPrivate: boolean;
   maxPlayers: number;
@@ -30,6 +31,12 @@ const RoomSchema: Schema = new Schema(
       ref: 'User',
       default: null,
     },
+    spectators: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
     status: {
       type: String,
       enum: ['lobby', 'playing', 'ended'],

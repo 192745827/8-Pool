@@ -5,6 +5,7 @@ import { registerRoomHandlers } from './room.socket';
 import { registerChatHandlers } from './chat.socket';
 import { registerGameHandlers } from './game.socket';
 import { registerTournamentHandlers } from './tournament.socket';
+import { registerFriendHandlers } from './friend.socket';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development-only';
 
@@ -42,6 +43,7 @@ export const initSocketServer = (io: Server): void => {
     registerChatHandlers(io, socket);
     registerGameHandlers(io, socket);
     registerTournamentHandlers(io, socket);
+    registerFriendHandlers(io, socket);
 
     socket.on('disconnect', () => {
       console.log(`🔌 Player disconnected: ${socket.id} (User: ${socket.user?.username})`);

@@ -14,6 +14,7 @@ This project is a full-stack, authoritative-server multiplayer 8-Ball Pool game.
 
 * **Authoritative Server Turn & Physics Sync**: Relays aiming angles, strikes, pockets, and fouls securely with client-side visual replication.
 * **3D Visuals & Shader Effects**: Premium 3D felt bed table, rails, and spheres with specular reflections, ball trails, collision bursts, and confetti particle effects.
+* **Tournament System**: 4-player automated knockout tournament with bracket generation, semi-finals, finals, and real-time socket updates.
 * **Achievements Tracking**: Tracks user performance metrics authoritatively on match conclusion, unlocking achievements like *First Win*, *Break Master*, *Perfect Game*, or *Combo King*.
 * **Comprehensive Game Settings**: Fully-functional page allowing custom controls over master music/sfx volumes, graphics resolution, shadow map quality, FPS capping (30/60/unlimited), UI themes (Dark, Light, Neon), and localization (English, Spanish, French, German).
 * **Code-Splitting & Lazy Loading**: Dynamic route splitting of chunk bundles, displaying a custom loading screen during transitions to maximize performance.
@@ -167,9 +168,104 @@ The client app is designed with a premium, glassmorphic UI containing neon glow 
 
 ---
 
+## 🏆 Feature Specifications
+
+### 🏆 Tournament System
+Allow multiple players to participate.
+
+**Flow:**
+```
+Tournament
+    ↓
+Register Players
+    ↓
+Generate Bracket
+    ↓
+Semi Final
+    ↓
+Final
+    ↓
+Champion
+```
+
+**Backend Models:**
+`Tournament` | `Match` | `Round` | `Bracket` | `Winner`
+
+---
+
+### 👥 Friend System
+Players can:
+* Add Friends
+* Remove Friends
+* Invite Friends
+* Online Status
+* Recently Played
+
+**Database Schema (`Friend`):**
+`user1` | `user2` | `status` | `createdAt`
+
+---
+
+### 💬 Global Chat System
+Instead of only room chat.
+
+**Channels:**
+* `Lobby Chat`
+* `Game Chat`
+* `Private Chat`
+
+**Socket Events:**
+`join-global-chat` | `leave-global-chat` | `private-message` | `typing` | `online-users`
+
+---
+
+### 📹 Spectator Mode
+A third person can join.
+
+**Room Roles:**
+`Player 1` | `Player 2` | `Spectator 1` | `Spectator 2`
+
+**Spectator Rules:**
+* Cannot shoot
+* Cannot chat during ranked games (optional)
+* Can watch live real-time physics & aiming sync
+
+---
+
+### 📺 Match Replay System
+Record and playback every shot sequence of completed matches.
+
+**Replay Structure:**
+`Shot 1` -> `Shot 2` -> `Shot 3` -> ... -> `Winner`
+
+**Replay Features:**
+* Save full shot sequence (shooter, aiming angle, shot power, initial ball positions snapshot)
+* Interactive step-by-step or automatic 3D replay playback
+* Accessible from User Profile & Replay Library
+
+---
+
+### 🎮 Practice Mode
+Offline single-player training mode for learning and shot practice.
+
+**Practice Features:**
+* Offline play (no server socket required)
+* Unlimited shots & zero turn timers
+* Reset balls & rack at any time
+* Instant Ball-in-Hand placement anywhere on table
+* Good for learning cue angles, bank shots, and power control
+
+---
+
 ## 🔮 Future Improvements Roadmap
 
+* [x] **Friend System**: Full implementation of Friend model, friend requests, online status tracking, and direct match invites.
+* [x] **Global Chat System**: Comprehensive multi-channel chat engine featuring Lobby Chat, Game Chat, Direct Private Messaging, Typing Indicators, and Online User lists.
+* [x] **Spectator Mode**: Support for third-party room spectators with real-time frame sync and shoot permissions disabled.
+* [x] **Match Replay System**: Full shot-by-shot match recording and interactive 3D playback viewer.
+* [ ] **Practice Mode**: Comprehensive offline practice arena with rack reset, ball placement, and shot training HUD.
 * [ ] **Authoritative WebAssembly Physics**: Fully bundle Rapier3D WASM into Node.js server loop for complete physics authoritative simulation frame-by-frame.
 * [ ] **Match Chat System Extensions**: Integrate quick-emoji updates and customized pre-written short chat scripts.
 * [ ] **Cue Stick Shop & Skins**: Support coin-based purchases for custom aiming guidelines and visual stick cues.
 * [ ] **Daily Challenges**: Introduce randomized target pocket shots and reward multipliers.
+

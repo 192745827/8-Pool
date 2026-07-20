@@ -67,13 +67,18 @@ export const createRoom = async (hostId: string, isPrivate: boolean): Promise<IR
  * @param roomId The 6-digit room code to join.
  * @param guestId The user ID of the guest player joining.
  */
-export const joinRoom = async (roomId: string, guestId: string): Promise<IRoom> => {
+export const joinRoom = async (roomId: string, guestId: string, asSpectator = false): Promise<IRoom> => {
   const normalizedRoomId = roomId.trim().toUpperCase();
 
   // Find the room
   const room = await Room.findOne({ roomId: normalizedRoomId });
   if (!room) {
     throw new Error('Room not found.');
+  }
+
+  // If specifically requested to spectate or if room is full/playing
+  if (asSpectator || (room.guest && room.guest.toString() !== guestId && room.host.toString() !== guestId) || room.status === 'playing') {
+    return spectateRoom(normalizedRoomId, guestId);
   }
 
   // Check room status
@@ -86,7 +91,8 @@ export const joinRoom = async (roomId: string, guestId: string): Promise<IRoom> 
     // If they are the host, allow them to re-enter without error
     const populatedRoom = await Room.findById(room._id)
       .populate('host', 'username avatar coins xp wins losses rank')
-      .populate('guest', 'username avatar coins xp wins losses rank');
+      .populate('guest', 'username avatar coins xp wins losses rank')
+      .populate('spectators', 'username avatar coins xp wins losses rank');
     return populatedRoom!;
   }
 
@@ -96,10 +102,11 @@ export const joinRoom = async (roomId: string, guestId: string): Promise<IRoom> 
     if (room.guest.toString() === guestId) {
       const populatedRoom = await Room.findById(room._id)
         .populate('host', 'username avatar coins xp wins losses rank')
-        .populate('guest', 'username avatar coins xp wins losses rank');
+        .populate('guest', 'username avatar coins xp wins losses rank')
+        .populate('spectators', 'username avatar coins xp wins losses rank');
       return populatedRoom!;
     }
-    throw new Error('Room is full.');
+    return spectateRoom(normalizedRoomId, guestId);
   }
 
   // Add the player as guest
@@ -109,7 +116,8 @@ export const joinRoom = async (roomId: string, guestId: string): Promise<IRoom> 
   // Return populated room
   const populatedRoom = await Room.findById(room._id)
     .populate('host', 'username avatar coins xp wins losses rank')
-    .populate('guest', 'username avatar coins xp wins losses rank');
+    .populate('guest', 'username avatar coins xp wins losses rank')
+    .populate('spectators', 'username avatar coins xp wins losses rank');
 
   if (!populatedRoom) {
     throw new Error('Room joined but failed to populate metadata.');
@@ -119,9 +127,34 @@ export const joinRoom = async (roomId: string, guestId: string): Promise<IRoom> 
 };
 
 /**
- * Leaves a game room.
- * @param roomId The 6-digit room code to leave.
- * @param userId The user ID of the player leaving.
+ * Spectates a room.
+ */
+export const spectateRoom = async (roomId: string, spectatorId: string): Promise<IRoom> => {
+  const normalizedRoomId = roomId.trim().toUpperCase();
+
+  const room = await Room.findOne({ roomId: normalizedRoomId });
+  if (!room) {
+    throw new Error('Room not found.');
+  }
+
+  const isHostOrGuest = room.host.toString() === spectatorId || room.guest?.toString() === spectatorId;
+  const isAlreadySpectating = room.spectators.some((s) => s.toString() === spectatorId);
+
+  if (!isHostOrGuest && !isAlreadySpectating) {
+    room.spectators.push(spectatorId as any);
+    await room.save();
+  }
+
+  const populatedRoom = await Room.findById(room._id)
+    .populate('host', 'username avatar coins xp wins losses rank')
+    .populate('guest', 'username avatar coins xp wins losses rank')
+    .populate('spectators', 'username avatar coins xp wins losses rank');
+
+  return populatedRoom!;
+};
+
+/**
+ * Leaves a game room (as host, guest, or spectator).
  */
 export const leaveRoom = async (roomId: string, userId: string): Promise<IRoom | null> => {
   const room = await Room.findOne({ roomId: roomId.trim().toUpperCase() });
@@ -142,9 +175,16 @@ export const leaveRoom = async (roomId: string, userId: string): Promise<IRoom |
     await room.save();
   }
 
+  // If spectator leaves, remove from spectators array
+  if (room.spectators.some((s) => s.toString() === userId)) {
+    room.spectators = room.spectators.filter((s) => s.toString() !== userId);
+    await room.save();
+  }
+
   const populatedRoom = await Room.findById(room._id)
     .populate('host', 'username avatar coins xp wins losses rank')
-    .populate('guest', 'username avatar coins xp wins losses rank');
+    .populate('guest', 'username avatar coins xp wins losses rank')
+    .populate('spectators', 'username avatar coins xp wins losses rank');
 
   return populatedRoom;
 };

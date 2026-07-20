@@ -111,12 +111,19 @@ export const Dashboard: React.FC = () => {
         setActionError(errData.message);
         setIsActionLoading(false);
       });
+      socket.on(SOCKET_EVENTS.FRIEND_INVITE_RECEIVED, (data: { inviterUsername: string; roomId: string }) => {
+        const accept = window.confirm(`🎮 ${data.inviterUsername} invited you to play a match! Join room now?`);
+        if (accept) {
+          navigate(`/game/${data.roomId}`);
+        }
+      });
     }
 
     return () => {
       if (socket) {
         socket.off(SOCKET_EVENTS.ROOM_CREATED);
         socket.off(SOCKET_EVENTS.ROOM_ERROR);
+        socket.off(SOCKET_EVENTS.FRIEND_INVITE_RECEIVED);
       }
     };
   }, [navigate, setRoom, profile]);
@@ -358,6 +365,22 @@ export const Dashboard: React.FC = () => {
               className="py-4 px-6 bg-gradient-to-r from-pool-purple to-pool-purple/85 hover:shadow-lg hover:shadow-pool-purple/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
             >
               <span>🏆</span> Play Tournament
+            </Link>
+
+            {/* Friend System */}
+            <Link
+              to="/friends"
+              className="py-4 px-6 bg-gradient-to-r from-pink-500 to-rose-600 hover:shadow-lg hover:shadow-pink-500/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+            >
+              <span>👥</span> Friends System
+            </Link>
+
+            {/* Match Replay */}
+            <Link
+              to="/replays"
+              className="py-4 px-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg hover:shadow-indigo-500/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+            >
+              <span>📺</span> Match Replays
             </Link>
 
             {/* Single Player Practice */}

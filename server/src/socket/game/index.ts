@@ -4,7 +4,10 @@ import { gameRoomManager } from './GameRoomManager';
 import { reconnectionManager } from './ReconnectionManager';
 import { GAME_EVENTS } from './GameEvents';
 import { User } from '../../models/User';
+import { MatchReplay } from '../../models/MatchReplay';
 import { handleTournamentMatchCompletion } from '../tournament.socket';
+import { recordMatchOpponents } from '../friend.socket';
+import { MatchManager } from './MatchManager';
 
 const getRankByXp = (xp: number): string => {
   const level = Math.floor(xp / 1000) + 1;
@@ -142,6 +145,30 @@ const updatePlayerProgression = async (
   }
 };
 
+const saveMatchReplay = async (match: MatchManager, roomId: string): Promise<void> => {
+  try {
+    const hostId = match.getHostUserId();
+    const guestId = match.getGuestUserId();
+    const winnerRole = match.getState().winner || 'host';
+    const winnerUser = winnerRole === 'host' ? hostId : guestId;
+    const shotLogs = match.getShotLogs();
+
+    const newReplay = new MatchReplay({
+      roomId,
+      host: hostId,
+      guest: guestId || null,
+      winner: winnerRole,
+      winnerUser: winnerUser || null,
+      shots: shotLogs,
+      gameDuration: match.getState().stats?.gameDuration || 0,
+    });
+
+    await newReplay.save();
+  } catch (err) {
+    console.error('Failed to save match replay:', err);
+  }
+};
+
 export * from './GameEvents';
 export * from './GameState';
 export * from './PhysicsSync';
@@ -158,9 +185,12 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
   const userId = socket.user?.id;
   if (!userId) return;
 
-  // 1. AIM EVENT: Relays aiming stick rotation to the opponent in real-time
+  // 1. AIM EVENT: Relays aiming stick rotation to the opponent and spectators in real-time
   socket.on(GAME_EVENTS.AIM, (data: { roomId: string; angle: number }) => {
-    socket.to(data.roomId).emit(GAME_EVENTS.AIM, { userId, angle: data.angle });
+    const match = gameRoomManager.getMatch(data.roomId);
+    if (match && (match.getHostUserId() === userId || match.getGuestUserId() === userId)) {
+      socket.to(data.roomId).emit(GAME_EVENTS.AIM, { userId, angle: data.angle });
+    }
   });
 
   // 2. SHOOT EVENT: Triggers physics simulation and rule evaluations
@@ -171,7 +201,13 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
         throw new Error('Active match session not found');
       }
 
-      // Relay shot payload to opponent client for local visual replication
+      // Ensure user is host or guest (spectators cannot shoot)
+      if (match.getHostUserId() !== userId && match.getGuestUserId() !== userId) {
+        socket.emit('game-error', { message: 'Spectators are not allowed to shoot' });
+        return;
+      }
+
+      // Relay shot payload to opponent client and spectators for local visual replication
       socket.to(data.roomId).emit(GAME_EVENTS.SHOOT, { angle: data.angle, power: data.power });
 
       const result = match.executeShot(userId, data.angle, data.power);
@@ -207,6 +243,12 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
         if (data.roomId.toUpperCase().startsWith('TOURNAMENT_')) {
           handleTournamentMatchCompletion(data.roomId, winnerUserId, io);
         }
+
+        // Record opponents for recently-played history
+        recordMatchOpponents(match.getHostUserId(), match.getGuestUserId());
+
+        // Save match replay sequence
+        saveMatchReplay(match, data.roomId);
 
         // Trigger authoritative player rewards & achievements updates
         updatePlayerProgression(

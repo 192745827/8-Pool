@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth.routes';
 import roomRouter from './routes/room.routes';
+import friendRouter from './routes/friend.routes';
+import replayRouter from './routes/replay.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
@@ -27,6 +29,8 @@ app.get('/', (req, res) => {
 app.use('/health', healthRouter);
 app.use('/api/users', authRouter);
 app.use('/api/rooms', roomRouter);
+app.use('/api/friends', friendRouter);
+app.use('/api/replays', replayRouter);
 
 // Fallback global error handler
 app.use(errorHandler);

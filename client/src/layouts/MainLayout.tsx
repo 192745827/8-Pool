@@ -1,5 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
+import GlobalChat from '../components/GlobalChat';
 
 export const MainLayout: React.FC = () => {
   return (
@@ -35,6 +36,9 @@ export const MainLayout: React.FC = () => {
           <Outlet />
         </React.Suspense>
       </main>
+
+      {/* Floating Global Chat Engine */}
+      <GlobalChat />
 
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-slate-600 border-t border-white/5">

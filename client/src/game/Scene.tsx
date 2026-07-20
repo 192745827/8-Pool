@@ -132,7 +132,7 @@ const FpsLimiter: React.FC = () => {
   return null;
 };
 
-export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: boolean }> = ({ roomId, isHost, isPractice }) => {
+export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: boolean; isSpectator?: boolean }> = ({ roomId, isHost, isPractice, isSpectator }) => {
   const graphicsQuality = useSettingsStore((state) => state.settings.graphicsQuality);
   const [activeBalls, setActiveBalls] = useState<number[]>([
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
@@ -424,6 +424,13 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: b
           👤 {isPractice ? 'PRACTICE MODE' : matchState.activePlayer === 'host' ? 'HOST\'S TURN' : 'GUEST\'S TURN'}
         </span>
 
+        {/* Spectator Badge */}
+        {isSpectator && (
+          <span className="px-3 py-1 text-[10px] font-extrabold tracking-widest uppercase rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.3)] animate-pulse">
+            📹 SPECTATING LIVE
+          </span>
+        )}
+
         {/* Ball Group Assignments */}
         <span className="px-3 py-1 text-[10px] font-bold text-slate-400 bg-slate-900/60 backdrop-blur border border-white/5 rounded-full">
           HOST: <span className={matchState.hostGroup === 'solids' ? 'text-amber-400 font-extrabold' : matchState.hostGroup === 'stripes' ? 'text-purple-400 font-extrabold' : 'text-slate-500'}>
@@ -482,8 +489,10 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: b
         </div>
       </div>
 
-      {/* 4. Pullback Drag Power Bar */}
-      <PowerMeter power={power} visible={turnState === 'idle' || turnState === 'aiming' || turnState === 'charging'} />
+      {/* 4. Pullback Drag Power Bar (Hidden for Spectators) */}
+      {!isSpectator && (
+        <PowerMeter power={power} visible={turnState === 'idle' || turnState === 'aiming' || turnState === 'charging'} />
+      )}
 
       {/* 5. Controls Tip Banner */}
       {matchState.ballInHand ? (

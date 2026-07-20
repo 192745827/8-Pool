@@ -57,14 +57,14 @@ export const registerRoomHandlers = (io: Server, socket: AuthenticatedSocket): v
   });
 
   // 2. JOIN ROOM EVENT
-  socket.on('join-room', async (data: { roomId: string }) => {
+  socket.on('join-room', async (data: { roomId: string; asSpectator?: boolean }) => {
     try {
-      const room = await roomService.joinRoom(data.roomId, userId);
+      const room = await roomService.joinRoom(data.roomId, userId, !!data.asSpectator);
       
       // Join socket channel
       socket.join(room.roomId);
       
-      // Broadcast updated room status to all players in the room channel
+      // Broadcast updated room status to all players and spectators in the room channel
       io.to(room.roomId).compress(true).emit('room-updated', serializeRoomWithReadyState(room));
     } catch (err: any) {
       socket.emit('room-error', { message: err.message || 'Failed to join room via socket' });
