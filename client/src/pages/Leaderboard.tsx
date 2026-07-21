@@ -1,7 +1,8 @@
 import React from 'react';
+import Rankings from './Rankings';
 
-function Leaderboard() {
-  return <h1>Leaderboard Page</h1>;
-}
+export const Leaderboard: React.FC = () => {
+  return <Rankings />;
+};
 
 export default Leaderboard;

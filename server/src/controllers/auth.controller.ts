@@ -52,9 +52,10 @@ export const handleAuth = async (req: Request, res: Response): Promise<void> => 
  */
 export const handleLogin = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, password } = req.body;
+    const { username, email, password } = req.body;
+    const identifier = username || email;
 
-    if (!username || typeof username !== 'string') {
+    if (!identifier || typeof identifier !== 'string') {
       res.status(400).json({ error: 'Username or email is required.' });
       return;
     }
@@ -64,7 +65,7 @@ export const handleLogin = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const { user, token } = await authService.loginUser(username.trim(), password);
+    const { user, token } = await authService.loginUser(identifier.trim(), password);
 
     res.status(200).json({
       _id: user._id,

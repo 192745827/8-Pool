@@ -7,10 +7,18 @@ import logger from '../utils/logger';
 export const performanceMetrics = (req: Request, res: Response, next: NextFunction) => {
   const startMs = Date.now();
 
+  // Intercept res.end to set header before response is completed and headers are sent
+  const originalEnd = res.end;
+  res.end = function (chunk?: any, encoding?: any, cb?: any) {
+    if (!res.headersSent) {
+      const durationMs = Date.now() - startMs;
+      res.setHeader('X-Response-Time', `${durationMs}ms`);
+    }
+    return originalEnd.call(this, chunk, encoding, cb);
+  };
+
   res.on('finish', () => {
     const durationMs = Date.now() - startMs;
-    res.setHeader('X-Response-Time', `${durationMs}ms`);
-
     // Log telemetry for API calls
     if (req.originalUrl.startsWith('/api')) {
       logger.info('API Telemetry', {

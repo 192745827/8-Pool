@@ -29,11 +29,11 @@ export const validateRegisterInput = (req: Request, res: Response, next: NextFun
  * Validates Auth Login Payload
  */
 export const validateLoginInput = (req: Request, res: Response, next: NextFunction) => {
-  const { email, password } = req.body;
+  const { email, username, password } = req.body;
+  const identifier = email || username;
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!email || typeof email !== 'string' || !emailRegex.test(email.trim())) {
-    res.status(400).json({ message: 'Invalid email address format' });
+  if (!identifier || typeof identifier !== 'string' || identifier.trim().length < 3) {
+    res.status(400).json({ message: 'Username or email address is required' });
     return;
   }
 

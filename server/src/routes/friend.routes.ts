@@ -132,7 +132,7 @@ router.post('/request', async (req: AuthRequest, res: Response): Promise<void> =
     // Standardize user order (smaller ID first) to avoid duplicate pairs
     const [u1, u2] = [userId, targetUser._id.toString()].sort();
 
-    let existing = await Friend.findOne({ user1: u1, user2: u2 });
+    const existing = await Friend.findOne({ user1: u1, user2: u2 });
 
     if (existing) {
       if (existing.status === 'accepted') {
