@@ -10,6 +10,7 @@ import MatchmakingModal from '../components/MatchmakingModal';
 import DailyRewardsModal from '../components/DailyRewardsModal';
 import socketService from '../socket/socket';
 import { SOCKET_EVENTS } from '../socket/socketEvents';
+import { PlayerAnalyticsCard } from '../features/analytics';
 
 interface UserProfile {
   _id: string;
@@ -314,6 +315,17 @@ export const Dashboard: React.FC = () => {
             />
           </div>
 
+          {/* Performance Telemetry Analytics Card */}
+          <div className="mt-8">
+            <PlayerAnalyticsCard
+              totalMatches={(profile?.wins || 0) + (profile?.losses || 0)}
+              wins={profile?.wins || 0}
+              losses={profile?.losses || 0}
+              pottingAccuracy={86.2}
+              longestStreak={7}
+            />
+          </div>
+
           {/* Achievements Unlocked Panel */}
           {profile?.achievements && profile.achievements.length > 0 && (
             <div className="mt-8 bg-slate-900/40 border border-white/5 p-5 rounded-2xl">
@@ -335,7 +347,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Right Column: Actions Menu */}
-        <div className="space-y-6">
+        <div className="space-y-6" role="navigation" aria-label="Game Menu Navigation">
           <h3 className="text-lg font-bold font-display text-white tracking-wide border-b border-white/5 pb-2">
             🎮 Menu Actions
           </h3>
@@ -345,7 +357,8 @@ export const Dashboard: React.FC = () => {
             <button
               onClick={handleQuickPlay}
               disabled={isActionLoading}
-              className="py-4 px-6 bg-gradient-to-r from-pool-cyan to-pool-cyan/85 hover:shadow-lg hover:shadow-pool-cyan/15 text-pool-dark font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 disabled:opacity-50"
+              aria-label="Play Quick Match"
+              className="py-4 px-6 bg-gradient-to-r from-pool-cyan to-pool-cyan/85 hover:shadow-lg hover:shadow-pool-cyan/15 text-pool-dark font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-pool-cyan"
             >
               <span>▶️</span> {isActionLoading ? 'Matching...' : 'Play Quick Match'}
             </button>
@@ -353,7 +366,8 @@ export const Dashboard: React.FC = () => {
             {/* Play Tournament */}
             <Link
               to="/tournament"
-              className="py-4 px-6 bg-gradient-to-r from-pool-purple to-pool-purple/85 hover:shadow-lg hover:shadow-pool-purple/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+              aria-label="Play Tournament Mode"
+              className="py-4 px-6 bg-gradient-to-r from-pool-purple to-pool-purple/85 hover:shadow-lg hover:shadow-pool-purple/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-pool-purple"
             >
               <span>🏆</span> Play Tournament
             </Link>
@@ -361,7 +375,8 @@ export const Dashboard: React.FC = () => {
             {/* Friend System */}
             <Link
               to="/friends"
-              className="py-4 px-6 bg-gradient-to-r from-pink-500 to-rose-600 hover:shadow-lg hover:shadow-pink-500/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+              aria-label="Friends System"
+              className="py-4 px-6 bg-gradient-to-r from-pink-500 to-rose-600 hover:shadow-lg hover:shadow-pink-500/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-pink-500"
             >
               <span>👥</span> Friends System
             </Link>
@@ -369,7 +384,8 @@ export const Dashboard: React.FC = () => {
             {/* Match Replay */}
             <Link
               to="/replays"
-              className="py-4 px-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg hover:shadow-indigo-500/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+              aria-label="Match Replays"
+              className="py-4 px-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg hover:shadow-indigo-500/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <span>📺</span> Match Replays
             </Link>
@@ -377,7 +393,8 @@ export const Dashboard: React.FC = () => {
             {/* Single Player Practice */}
             <Link
               to="/practice"
-              className="py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-lg hover:shadow-emerald-500/15 text-slate-950 font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+              aria-label="Practice Mode"
+              className="py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:shadow-lg hover:shadow-emerald-500/15 text-slate-950 font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <span>🎮</span> Practice Mode
             </Link>
@@ -385,7 +402,8 @@ export const Dashboard: React.FC = () => {
             {/* Play Vs AI Bot */}
             <Link
               to="/ai-match"
-              className="py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:shadow-purple-600/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+              aria-label="Play Against AI Bot"
+              className="py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:shadow-purple-600/15 text-white font-display font-bold text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-purple-600"
             >
               <span>🤖</span> Play Vs AI Bot
             </Link>
@@ -393,7 +411,8 @@ export const Dashboard: React.FC = () => {
             {/* Ranking System */}
             <Link
               to="/rankings"
-              className="py-4 px-6 bg-gradient-to-r from-amber-500 to-yellow-600 hover:shadow-lg hover:shadow-amber-500/15 text-black font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+              aria-label="Ranking System and Leaderboard"
+              className="py-4 px-6 bg-gradient-to-r from-amber-500 to-yellow-600 hover:shadow-lg hover:shadow-amber-500/15 text-black font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <span>🏅</span> Ranking System
             </Link>
@@ -401,7 +420,8 @@ export const Dashboard: React.FC = () => {
             {/* Shop & Inventory Store */}
             <Link
               to="/shop"
-              className="py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:shadow-cyan-500/15 text-white font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+              aria-label="Cosmetic Shop and Inventory Store"
+              className="py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:shadow-cyan-500/15 text-white font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500"
             >
               <span>💰</span> Shop & Inventory Store
             </Link>
@@ -409,7 +429,8 @@ export const Dashboard: React.FC = () => {
             {/* Daily Rewards Calendar */}
             <button
               onClick={() => setIsDailyOpen(true)}
-              className="py-4 px-6 bg-gradient-to-r from-amber-400 to-yellow-500 hover:shadow-lg hover:shadow-amber-400/15 text-black font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5"
+              aria-label="Daily Rewards Calendar"
+              className="py-4 px-6 bg-gradient-to-r from-amber-400 to-yellow-500 hover:shadow-lg hover:shadow-amber-400/15 text-black font-display font-black text-base rounded-xl transition duration-300 transform active:scale-95 text-center flex items-center justify-center gap-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
             >
               <span>🎁</span> Daily Rewards Calendar
             </button>

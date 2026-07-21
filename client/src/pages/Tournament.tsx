@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { useGameStore } from '../store/useGameStore';
 import socketService from '../socket/socket';
 import { SOCKET_EVENTS } from '../socket/socketEvents';
+import { TournamentBracket } from '../features/tournaments';
 
 interface MatchPlayer {
   _id: string;
@@ -329,6 +330,11 @@ export const Tournament: React.FC = () => {
           </div>
 
         </div>
+      </div>
+
+      {/* Visual Bracket Overview Feature Component */}
+      <div className="mt-12">
+        <TournamentBracket />
       </div>
     </div>
   );
