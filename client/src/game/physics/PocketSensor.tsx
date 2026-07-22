@@ -26,7 +26,9 @@ export const PocketSensor: React.FC<PocketSensorProps> = ({ onBallPocketed }) =>
               const otherBody = event.other.rigidBodyObject;
               if (otherBody && otherBody.userData && otherBody.userData.type === 'ball') {
                 const ballId = otherBody.userData.ballId;
-                onBallPocketed?.(ballId, pocket.id);
+                setTimeout(() => {
+                  onBallPocketed?.(ballId, pocket.id);
+                }, 0);
               }
             }}
           />

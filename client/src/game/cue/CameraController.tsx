@@ -27,7 +27,12 @@ export const CameraController: React.FC<CameraControllerProps> = ({ cueBallRef }
   useFrame(() => {
     if (!cueBallRef.current || !orbitControlsRef.current) return;
 
-    const translation = cueBallRef.current.translation();
+    let translation;
+    try {
+      translation = cueBallRef.current.translation();
+    } catch (e) {
+      return;
+    }
     
     // Ignore updates if the cue ball is pocketed/scratched and teleported deep under the table Y=-10
     if (translation.y < -2) return;

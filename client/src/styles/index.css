@@ -13,6 +13,73 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ─── UI THEME OVERRIDES ─── */
 
+/* Dark (Grey) Theme Override Styles */
+.theme-dark {
+  background-color: #1e1f22;
+  color: #f8fafc;
+}
+
+.theme-dark body {
+  background-color: #1e1f22;
+  color: #f8fafc;
+}
+
+.theme-dark .bg-pool-dark,
+.theme-dark .bg-pool-dark\/85 {
+  background-color: #1e1f22 !important;
+}
+
+.theme-dark .bg-slate-950 {
+  background-color: #151618 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.theme-dark .bg-slate-900,
+.theme-dark .bg-slate-900\/60,
+.theme-dark .bg-slate-900\/40,
+.theme-dark .bg-slate-900\/80 {
+  background-color: #2b2d31 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
+}
+
+.theme-dark .text-white {
+  color: #f8fafc !important;
+}
+
+.theme-dark .text-slate-400 {
+  color: #a1a1aa !important;
+}
+
+.theme-dark .text-slate-300 {
+  color: #d4d4d8 !important;
+}
+
+.theme-dark .border-white\/5,
+.theme-dark .border-white\/10,
+.theme-dark .border-white\/15,
+.theme-dark .border-white\/20,
+.theme-dark .border-white\/35 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.theme-dark .bg-slate-900\/40 {
+  background-color: #151618 !important;
+}
+
+.theme-dark .bg-slate-900\/70,
+.theme-dark .bg-slate-900\/80 {
+  background-color: rgba(43, 45, 49, 0.8) !important;
+}
+
+/* Gradients for Dark Theme */
+.theme-dark .from-slate-950.via-slate-900.to-slate-950 {
+  background-image: linear-gradient(to right, #151618, #2b2d31, #151618) !important;
+}
+.theme-dark .from-amber-500\/5.to-slate-950\/80 {
+  background-image: linear-gradient(to bottom, rgba(245, 158, 11, 0.05), rgba(21, 22, 24, 0.8)) !important;
+}
+
 /* Light Theme Override Styles */
 .theme-light {
   background-color: #f8fafc;

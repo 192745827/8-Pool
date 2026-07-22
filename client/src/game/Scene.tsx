@@ -80,22 +80,32 @@ const PhysicsConstraintController: React.FC<{
   useFrame(() => {
     // Cue Ball Y constraint (only if not pocketed/scratched, i.e., Y > -2)
     if (cueBallRef.current) {
-      const body = cueBallRef.current;
-      const pos = body.translation();
-      if (pos.y > -2 && Math.abs(pos.y - 0.28) > 0.005) {
-        body.setTranslation({ x: pos.x, y: 0.28, z: pos.z }, true);
-        const vel = body.linvel();
-        body.setLinvel({ x: vel.x, y: 0, z: vel.z }, true);
+      try {
+        const body = cueBallRef.current;
+        const pos = body.translation();
+        if (pos.y > -2 && Math.abs(pos.y - 0.28) > 0.005) {
+          body.setTranslation({ x: pos.x, y: 0.28, z: pos.z }, true);
+          const vel = body.linvel();
+          body.setLinvel({ x: vel.x, y: 0, z: vel.z }, true);
+        }
+      } catch (e) {
+        // Safe guard
       }
     }
 
     // Object Balls Y constraint
     for (const body of ballRefs.current.values()) {
-      const pos = body.translation();
-      if (Math.abs(pos.y - 0.28) > 0.005) {
-        body.setTranslation({ x: pos.x, y: 0.28, z: pos.z }, true);
-        const vel = body.linvel();
-        body.setLinvel({ x: vel.x, y: 0, z: vel.z }, true);
+      if (body) {
+        try {
+          const pos = body.translation();
+          if (Math.abs(pos.y - 0.28) > 0.005) {
+            body.setTranslation({ x: pos.x, y: 0.28, z: pos.z }, true);
+            const vel = body.linvel();
+            body.setLinvel({ x: vel.x, y: 0, z: vel.z }, true);
+          }
+        } catch (e) {
+          // Safe guard
+        }
       }
     }
   });
@@ -244,8 +254,12 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: b
 
     const body = ballRefs.current.get(ballId);
     if (body) {
-      const pos = body.translation();
-      triggerPocketBurst(pos.x, 0.28, pos.z, ballId === 0 ? '#ffffff' : HUD_BALL_COLORS[ballId] || '#00f0ff');
+      try {
+        const pos = body.translation();
+        triggerPocketBurst(pos.x, 0.28, pos.z, ballId === 0 ? '#ffffff' : HUD_BALL_COLORS[ballId] || '#00f0ff');
+      } catch (e) {
+        // Safe guard
+      }
     }
 
     gameManagerRef.current.recordBallPocketed(ballId);
@@ -255,9 +269,13 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: b
         setCueBallScratched(true);
         // Safely move cue ball out of sight & zero velocities
         if (cueBallRef.current) {
-          cueBallRef.current.setTranslation({ x: 0, y: -10, z: 0 }, true);
-          cueBallRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-          cueBallRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          try {
+            cueBallRef.current.setTranslation({ x: 0, y: -10, z: 0 }, true);
+            cueBallRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+            cueBallRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          } catch (e) {
+            // Safe guard
+          }
         }
       }
     } else {

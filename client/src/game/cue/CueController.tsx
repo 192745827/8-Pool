@@ -171,7 +171,12 @@ export const CueController: React.FC<CueControllerProps> = ({
       }
 
       if (isBall && hitColliderParent) {
-        const rawTargetPos = hitColliderParent.translation();
+        let rawTargetPos;
+        try {
+          rawTargetPos = hitColliderParent.translation();
+        } catch (e) {
+          return;
+        }
         const targetBallPos = new THREE.Vector3(rawTargetPos.x, 0.28, rawTargetPos.z);
 
         // C. Target ball path line
@@ -232,7 +237,12 @@ export const CueController: React.FC<CueControllerProps> = ({
   useFrame((state, delta) => {
     if (!cueBallRef.current || !inputManagerRef.current) return;
 
-    const translation = cueBallRef.current.translation();
+    let translation;
+    try {
+      translation = cueBallRef.current.translation();
+    } catch (e) {
+      return;
+    }
     const cueBallPos = new THREE.Vector3(translation.x, 0.28, translation.z);
     const inputManager = inputManagerRef.current;
 

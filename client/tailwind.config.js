@@ -8,7 +8,7 @@ export default {
     extend: {
       colors: {
         pool: {
-          dark: '#0a0e17',
+          dark: '#1e1f22',
           felt: '#126252',
           cyan: '#00f0ff',
           purple: '#bd00ff',
