@@ -209,6 +209,70 @@ export const registerGameHandlers = (io: Server, socket: AuthenticatedSocket): v
     }
   });
 
+  // 1b. SYNC BALL POSITIONS EVENT: Updates authoritative match positions and processes shot rules on client outcomes
+  socket.on('sync-ball-positions', (data: {
+    roomId: string;
+    balls: Array<{ id: number; x: number; y: number; z: number; isActive: boolean }>;
+    firstBallHit: number | null;
+    pocketedBalls: number[];
+    isCueBallScratched: boolean;
+    cushionHitsAfterContact?: number;
+  }) => {
+    try {
+      const match = gameRoomManager.getMatch(data.roomId);
+      if (!match) return;
+
+      // Ensure user is one of the active players
+      if (match.getHostUserId() !== userId && match.getGuestUserId() !== userId) return;
+
+      const state = match.getState();
+
+      // Update ball coordinates in server memory
+      state.balls = data.balls.map((b) => ({
+        id: b.id,
+        x: b.x,
+        y: b.y,
+        z: b.z,
+        isActive: b.isActive,
+      }));
+
+      // Rerun turn-end logic using actual client physics outcomes
+      state.status = 'turn-end';
+      const updatedState = RuleSync.processShotResult(
+        state,
+        data.firstBallHit,
+        data.pocketedBalls,
+        data.isCueBallScratched,
+        data.cushionHitsAfterContact || 0
+      );
+
+      // Overwrite the match state in MatchManager
+      match.updateState(updatedState);
+
+      // Handle transition to game over
+      if (updatedState.status === 'game-over') {
+        recordMatchOpponents(match.getHostUserId(), match.getGuestUserId());
+        updatePlayerProgression(
+          match.getHostUserId(),
+          match.getGuestUserId(),
+          updatedState.winner,
+          match.getAchievementDetails()
+        ).then(({ hostUnlocked, guestUnlocked }) => {
+          if (updatedState.stats) {
+            updatedState.stats.host.unlockedAchievements = hostUnlocked;
+            updatedState.stats.guest.unlockedAchievements = guestUnlocked;
+          }
+          io.to(data.roomId).compress(true).emit(GAME_EVENTS.GAME_STATE_UPDATE, updatedState);
+        });
+      }
+
+      // Broadcast synchronized state to everyone in the room
+      io.to(data.roomId).compress(true).emit(GAME_EVENTS.GAME_STATE_UPDATE, updatedState);
+    } catch (err: any) {
+      console.error('Failed to sync ball positions:', err);
+    }
+  });
+
   // 2. SHOOT EVENT: Triggers physics simulation and rule evaluations
   socket.on(GAME_EVENTS.SHOOT, (data: { roomId: string; angle: number; power: number }) => {
     try {

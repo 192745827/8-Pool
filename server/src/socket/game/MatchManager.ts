@@ -74,6 +74,13 @@ export class MatchManager {
   }
 
   /**
+   * Authoritatively updates/overwrites the match state.
+   */
+  public updateState(newState: AuthoritativeGameState): void {
+    this.state = newState;
+  }
+
+  /**
    * Authoritatively executes a shot intent on the server.
    * Validates player turn, runs physics sync simulation, and executes rules checks.
    */

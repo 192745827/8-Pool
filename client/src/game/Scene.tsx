@@ -79,7 +79,9 @@ const TurnController: React.FC<{
   respawnCueBall: () => void;
   gameManager: GameManager;
   activeBalls: number[];
-}> = ({ cueBallRef, ballRefs, turnState, setTurnState, cueBallScratched, respawnCueBall, gameManager, activeBalls }) => {
+  isLocalTurn: boolean;
+  roomId?: string;
+}> = ({ cueBallRef, ballRefs, turnState, setTurnState, cueBallScratched, respawnCueBall, gameManager, activeBalls, isLocalTurn, roomId }) => {
   useFrame(() => {
     if (turnState !== 'balls-moving') return;
 
@@ -115,6 +117,39 @@ const TurnController: React.FC<{
 
     // When all balls stop rolling, conclude the turn
     if (!anyBallMoving) {
+      // 1. Gather final positions to emit for multiplayer synchronization
+      const finalBalls = Array.from({ length: 16 }, (_, i) => {
+        const body = i === 0 ? cueBallRef.current : ballRefs.current.get(i);
+        if (body && body.isValid() && activeBalls.includes(i)) {
+          try {
+            const pos = body.translation();
+            return { id: i, x: pos.x, y: 0.28, z: pos.z, isActive: true };
+          } catch (e) {
+            // fallback
+          }
+        }
+        const resetX = i === 0 ? PhysicsConstants.CUE_BALL_SPAWN[0] : 100 + i;
+        const resetY = -10;
+        const resetZ = i === 0 ? PhysicsConstants.CUE_BALL_SPAWN[2] : 100;
+        return { id: i, x: resetX, y: resetY, z: resetZ, isActive: false };
+      });
+
+      const firstBallHit = gameManager.getFirstBallHit();
+      const pocketedBalls = gameManager.getPocketedBalls();
+      const cushionHitsAfterContact = gameManager.getCushionHitsAfterContact();
+
+      // Send synchronization payload to the server
+      if (roomId && isLocalTurn) {
+        socketService.emit('sync-ball-positions', {
+          roomId,
+          balls: finalBalls,
+          firstBallHit,
+          pocketedBalls,
+          isCueBallScratched: cueBallScratched,
+          cushionHitsAfterContact
+        });
+      }
+
       const nextState = gameManager.endShotSimulation(activeBalls, cueBallScratched);
       if (nextState.status !== 'game-over') {
         if (cueBallScratched) {
@@ -135,74 +170,239 @@ const PhysicsConstraintController: React.FC<{
   ballRefs: React.MutableRefObject<Map<number, RapierRigidBody>>;
 }> = ({ cueBallRef, ballRefs }) => {
   useFrame(() => {
-    // Cue Ball constraints and manual sleeping threshold (only if not pocketed/scratched, i.e., Y > -2)
+    const activeBodies: Array<{
+      id: number;
+      body: RapierRigidBody;
+      pos: { x: number; y: number; z: number };
+      vel: { x: number; y: number; z: number };
+      angvel: { x: number; y: number; z: number };
+    }> = [];
+
+    // Gather cue ball if active on the table
     if (cueBallRef.current && cueBallRef.current.isValid()) {
+      const body = cueBallRef.current;
       try {
-        const body = cueBallRef.current;
         const pos = body.translation();
         if (pos.y > -2) {
           const vel = body.linvel();
-          const speed = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
-
-          // 1. Natural rolling resistance extra decay at low speed to prevent infinite creep/chatter
-          if (speed < PhysicsConstants.DECEL_LINEAR_THRESHOLD) {
-            if (speed < PhysicsConstants.SLEEP_LINEAR_THRESHOLD) {
-              body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-              body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-              body.sleep();
-            } else {
-              // Smoothly decelerate to a stop exponentially
-              body.setLinvel({
-                x: vel.x * PhysicsConstants.DECEL_DECAY_RATE,
-                y: vel.y,
-                z: vel.z * PhysicsConstants.DECEL_DECAY_RATE
-              }, true);
-            }
-          }
-          
-          // 2. Loose fallback height safety to prevent balls from flying off the table in extreme cases
-          if (Math.abs(pos.y - 0.28) > 0.05) {
-            body.setTranslation({ x: pos.x, y: 0.28, z: pos.z }, true);
-            body.setLinvel({ x: vel.x, y: 0, z: vel.z }, true);
-          }
+          const angvel = body.angvel();
+          activeBodies.push({
+            id: 0,
+            body,
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            vel: { x: vel.x, y: vel.y, z: vel.z },
+            angvel: { x: angvel.x, y: angvel.y, z: angvel.z }
+          });
         }
       } catch (e) {
         // Safe guard
       }
     }
 
-    // Object Balls constraints and manual sleeping threshold
-    for (const body of ballRefs.current.values()) {
+    // Gather object balls if active on the table
+    for (const [id, body] of ballRefs.current.entries()) {
       if (body && body.isValid()) {
         try {
           const pos = body.translation();
-          const vel = body.linvel();
-          const speed = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
-
-          // 1. Natural rolling resistance extra decay at low speed to prevent infinite creep/chatter
-          if (speed < PhysicsConstants.DECEL_LINEAR_THRESHOLD) {
-            if (speed < PhysicsConstants.SLEEP_LINEAR_THRESHOLD) {
-              body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-              body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-              body.sleep();
-            } else {
-              // Smoothly decelerate to a stop exponentially
-              body.setLinvel({
-                x: vel.x * PhysicsConstants.DECEL_DECAY_RATE,
-                y: vel.y,
-                z: vel.z * PhysicsConstants.DECEL_DECAY_RATE
-              }, true);
-            }
-          }
-          
-          // 2. Loose fallback height safety to prevent balls from flying off the table in extreme cases
-          if (Math.abs(pos.y - 0.28) > 0.05) {
-            body.setTranslation({ x: pos.x, y: 0.28, z: pos.z }, true);
-            body.setLinvel({ x: vel.x, y: 0, z: vel.z }, true);
+          if (pos.y > -2) {
+            const vel = body.linvel();
+            const angvel = body.angvel();
+            activeBodies.push({
+              id,
+              body,
+              pos: { x: pos.x, y: pos.y, z: pos.z },
+              vel: { x: vel.x, y: vel.y, z: vel.z },
+              angvel: { x: angvel.x, y: angvel.y, z: angvel.z }
+            });
           }
         } catch (e) {
           // Safe guard
         }
+      }
+    }
+
+    const R = PhysicsConstants.BALL_RADIUS;
+    const diameter = R * 2;
+    const X_MAX = PhysicsConstants.TABLE_X_MAX;
+    const Z_MAX = PhysicsConstants.TABLE_Z_MAX;
+    const dt = 1 / 60;
+
+    // 1. Force exact vertical height and Y-velocity lock to prevent floating/sinking/vertical jitter
+    for (const item of activeBodies) {
+      item.pos.y = 0.28;
+      item.vel.y = 0.0;
+    }
+
+    // 2. Perform Gum Rubber Cushion Boundary Clipping & Reflection resolution
+    for (const item of activeBodies) {
+      // Pockets coordinates check to allow balls to drop in
+      let nearPocket = false;
+      for (const pocket of PhysicsConstants.POCKETS) {
+        const dx = item.pos.x - pocket.position[0];
+        const dz = item.pos.z - pocket.position[2];
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < 0.45) {
+          nearPocket = true;
+          break;
+        }
+      }
+
+      if (!nearPocket) {
+        const cushionRest = PhysicsConstants.CUSHION_RESTITUTION;
+        
+        // X Boundaries (Left & Right Rails)
+        if (item.pos.x < -X_MAX) {
+          item.pos.x = -X_MAX;
+          if (item.vel.x < 0) {
+            item.vel.x = -item.vel.x * cushionRest;
+            // Generate torque after bouncing off vertical rail
+            item.angvel.z = -item.vel.x / R;
+          }
+        } else if (item.pos.x > X_MAX) {
+          item.pos.x = X_MAX;
+          if (item.vel.x > 0) {
+            item.vel.x = -item.vel.x * cushionRest;
+            // Generate torque after bouncing off vertical rail
+            item.angvel.z = -item.vel.x / R;
+          }
+        }
+
+        // Z Boundaries (Top & Bottom Rails)
+        if (item.pos.z < -Z_MAX) {
+          item.pos.z = -Z_MAX;
+          if (item.vel.z < 0) {
+            item.vel.z = -item.vel.z * cushionRest;
+            // Generate torque after bouncing off horizontal rail
+            item.angvel.x = item.vel.z / R;
+          }
+        } else if (item.pos.z > Z_MAX) {
+          item.pos.z = Z_MAX;
+          if (item.vel.z > 0) {
+            item.vel.z = -item.vel.z * cushionRest;
+            // Generate torque after bouncing off horizontal rail
+            item.angvel.x = item.vel.z / R;
+          }
+        }
+      }
+    }
+
+    // 3. Resolve Ball-to-Ball Overlaps & Crisp Elastic Collisions (Non-Penetration Solver)
+    const ballRest = PhysicsConstants.BALL_RESTITUTION;
+    for (let i = 0; i < activeBodies.length; i++) {
+      const b1 = activeBodies[i];
+      for (let j = i + 1; j < activeBodies.length; j++) {
+        const b2 = activeBodies[j];
+
+        const dx = b2.pos.x - b1.pos.x;
+        const dz = b2.pos.z - b1.pos.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+
+        if (dist < diameter && dist > 0.0001) {
+          const overlap = diameter - dist;
+          const nx = dx / dist;
+          const nz = dz / dist;
+
+          // Push apart positional correction (prevent penetration/clipping)
+          const pushX = nx * overlap * 0.5;
+          const pushZ = nz * overlap * 0.5;
+          b1.pos.x -= pushX;
+          b1.pos.z -= pushZ;
+          b2.pos.x += pushX;
+          b2.pos.z += pushZ;
+
+          // Elastic relative velocity bounce along contact normal
+          const rvx = b2.vel.x - b1.vel.x;
+          const rvz = b2.vel.z - b1.vel.z;
+          const vn = rvx * nx + rvz * nz;
+
+          if (vn < 0) { // Moving towards each other
+            const impulse = -(1.0 + ballRest) * vn / 2.0;
+            b1.vel.x -= impulse * nx;
+            b1.vel.z -= impulse * nz;
+            b2.vel.x += impulse * nx;
+            b2.vel.z += impulse * nz;
+          }
+        }
+      }
+    }
+
+    // 4. Sliding-to-Rolling Physics, Smooth Deceleration, & Stable Stacking Solver
+    const mu_s = PhysicsConstants.TABLE_FRICTION;
+    const g = 9.81;
+    const dv_max = mu_s * g * dt;
+
+    for (const item of activeBodies) {
+      const speed = Math.sqrt(item.vel.x * item.vel.x + item.vel.z * item.vel.z);
+
+      // Decel & Sleeping threshold logic (ensures stable stacking and clean rest)
+      if (speed < PhysicsConstants.DECEL_LINEAR_THRESHOLD) {
+        if (speed < PhysicsConstants.SLEEP_LINEAR_THRESHOLD) {
+          item.vel.x = 0;
+          item.vel.y = 0;
+          item.vel.z = 0;
+          item.angvel.x = 0;
+          item.angvel.y = 0;
+          item.angvel.z = 0;
+          item.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          item.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          item.body.sleep();
+          continue;
+        } else {
+          // Smooth exponential stop
+          item.vel.x *= PhysicsConstants.DECEL_DECAY_RATE;
+          item.vel.z *= PhysicsConstants.DECEL_DECAY_RATE;
+        }
+      }
+
+      // Calculate relative sliding/slip velocity at the table bed contact point
+      // slip_x = vx + wz * R, slip_z = vz - wx * R
+      const slip_x = item.vel.x + item.angvel.z * R;
+      const slip_z = item.vel.z - item.angvel.x * R;
+      const slip_speed = Math.sqrt(slip_x * slip_x + slip_z * slip_z);
+
+      if (slip_speed > 0.001) {
+        // Sliding: friction opposes slip, reducing speed and generating torque
+        const d_vx = -slip_x / 3.5;
+        const d_vz = -slip_z / 3.5;
+        const d_v_mag = Math.sqrt(d_vx * d_vx + d_vz * d_vz);
+
+        let apply_dvx = d_vx;
+        let apply_dvz = d_vz;
+
+        if (d_v_mag > dv_max) {
+          apply_dvx = (d_vx / d_v_mag) * dv_max;
+          apply_dvz = (d_vz / d_v_mag) * dv_max;
+        }
+
+        item.vel.x += apply_dvx;
+        item.vel.z += apply_dvz;
+
+        // Apply corresponding torque to spin up the ball (conserve angular momentum)
+        // d_ang_wx = -2.5 * d_vz / R, d_ang_wz = 2.5 * d_vx / R
+        item.angvel.x -= (2.5 * apply_dvz) / R;
+        item.angvel.z += (2.5 * apply_dvx) / R;
+      } else {
+        // Pure Rolling: rotation perfectly matches translation
+        item.angvel.x = item.vel.z / R;
+        item.angvel.z = -item.vel.x / R;
+
+        // Apply rolling resistance friction decay (linear damping)
+        item.vel.x *= (1 - PhysicsConstants.BALL_LINEAR_DAMPING * dt);
+        item.vel.z *= (1 - PhysicsConstants.BALL_LINEAR_DAMPING * dt);
+      }
+
+      // Decay sidespin (english)
+      item.angvel.y *= (1 - PhysicsConstants.BALL_ANGULAR_DAMPING * dt);
+    }
+
+    // 5. Commit state updates back to Rapier rigid bodies
+    for (const item of activeBodies) {
+      try {
+        item.body.setTranslation({ x: item.pos.x, y: item.pos.y, z: item.pos.z }, true);
+        item.body.setLinvel({ x: item.vel.x, y: item.vel.y, z: item.vel.z }, true);
+        item.body.setAngvel({ x: item.angvel.x, y: item.angvel.y, z: item.angvel.z }, true);
+      } catch (e) {
+        // Safe guard
       }
     }
   });
@@ -560,6 +760,8 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: b
             // eslint-disable-next-line react-hooks/refs
             gameManager={gameManagerRef.current}
             activeBalls={activeBalls}
+            isLocalTurn={isLocalTurn}
+            roomId={roomId}
           />
           <PhysicsConstraintController
             cueBallRef={cueBallRef}

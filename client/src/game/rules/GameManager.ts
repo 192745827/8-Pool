@@ -126,6 +126,18 @@ export class GameManager {
     return this.state;
   }
 
+  public getFirstBallHit(): number | null {
+    return this.firstBallHit;
+  }
+
+  public getPocketedBalls(): number[] {
+    return this.pocketedBalls;
+  }
+
+  public getCushionHitsAfterContact(): number {
+    return this.cushionHitsAfterContact;
+  }
+
   /**
    * Authoritatively synchronizes local client state with the server game state.
    */

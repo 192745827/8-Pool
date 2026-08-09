@@ -11,6 +11,8 @@ export const PhysicsConstants = {
   TABLE_FRICTION: 0.20, // Sliding kinetic friction on cloth to generate torque for rolling (0.15-0.40)
   CUSHION_RESTITUTION: 0.72, // Professional lively gum rubber cushions rebound (70%-80%)
   CUSHION_FRICTION: 0.14, // Friction along rails (0.12-0.15)
+  TABLE_X_MAX: 7.02, // Boundary inner edge for ball center X position
+  TABLE_Z_MAX: 3.42, // Boundary inner edge for ball center Z position
 
   // Custom sleeping & deceleration thresholds (to bring slow rolling to a buttery smooth halt)
   SLEEP_LINEAR_THRESHOLD: 0.02, // Linear velocity below which ball is snapped to sleep (m/s)
