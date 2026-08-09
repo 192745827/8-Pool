@@ -738,12 +738,12 @@ export const Scene: React.FC<{ roomId?: string; isHost?: boolean; isPractice?: b
           <PocketSensor onBallPocketed={handleBallPocketed} />
           {/* Grounding contact shadows directly under the balls */}
           <ContactShadows
-            position={[0, 0.102, 0]}
-            opacity={0.65}
-            scale={15}
-            blur={1.4}
-            far={0.3}
-            resolution={512}
+            position={[0, 0.101, 0]}
+            opacity={0.85}
+            scale={16}
+            blur={0.6}
+            far={0.15}
+            resolution={1024}
           />
           <Balls 
             activeBalls={activeBalls} 

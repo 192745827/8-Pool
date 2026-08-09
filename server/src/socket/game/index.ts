@@ -8,6 +8,7 @@ import { MatchReplay } from '../../models/MatchReplay';
 import { handleTournamentMatchCompletion } from '../tournament.socket';
 import { recordMatchOpponents } from '../friend.socket';
 import { MatchManager } from './MatchManager';
+import { RuleSync } from './RuleSync';
 
 const getRankByXp = (xp: number): string => {
   const level = Math.floor(xp / 1000) + 1;
